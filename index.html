@@ -1,0 +1,773 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anime Deck</title>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Anime Deck">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-180.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@800&display=swap">
+<style>
+/* Layout: Operate mode, iOS conventions. Header: segmented Discover / Favorites + two icon buttons.
+   Discover: one card that flips. Front = discovery (poster, description, why you'd like it, taste-fit chart, Pass / Watchlist / Seen it).
+   Back = feedback (rating slider Hated→Favorite, six aspect sliders, dropped switch, Save).
+   Favorites: filter segment + dense rows that expand on tap.
+   Color: neutrals + one tint (indigo). Each show's poster color is content, not UI. */
+:root{
+  --bg:#f2f2f7; --card:#ffffff; --fill:#e9e9ef; --fill2:#f5f5f8; --line:rgba(60,60,67,.14);
+  --text:#1c1c1e; --mute:#6c6c72; --faint:#aeaeb4;
+  --tint:#5856d6; --tintSoft:rgba(88,86,214,.12); --onTint:#ffffff;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  --disp:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;
+  --mark:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 18px 40px -12px rgba(0,0,0,.16);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#000000; --card:#1c1c1e; --fill:#2c2c2e; --fill2:#232325; --line:rgba(84,84,88,.55);
+  --text:#f5f5f7; --mute:#98989f; --faint:#5a5a60;
+  --tint:#7d7aff; --tintSoft:rgba(125,122,255,.18); --onTint:#ffffff;
+  --shadow:0 18px 40px -12px rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --card:#1c1c1e; --fill:#2c2c2e; --fill2:#232325; --line:rgba(84,84,88,.55);
+  --text:#f5f5f7; --mute:#98989f; --faint:#5a5a60;
+  --tint:#7d7aff; --tintSoft:rgba(125,122,255,.18); --onTint:#ffffff;
+  --shadow:0 18px 40px -12px rgba(0,0,0,.7); color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--ui);font-size:15px;-webkit-font-smoothing:antialiased;overflow:hidden;accent-color:var(--tint)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+::selection{background:var(--tintSoft)}
+*{scrollbar-width:thin;scrollbar-color:var(--faint) transparent}
+button,a{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;text-decoration:none}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--tintSoft);outline-offset:2px}
+button:disabled{cursor:default}
+.app{height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column;box-sizing:border-box;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 12px;gap:12px}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:8px}
+.seg{flex:1;display:grid;grid-template-columns:1fr 1fr;background:var(--fill);border-radius:9px;padding:2px;position:relative}
+.seg button{position:relative;z-index:1;height:32px;font-size:13.5px;font-weight:600;border-radius:7px}
+.seg .th{position:absolute;top:2px;bottom:2px;left:2px;width:calc((100% - 4px)/2);background:var(--card);border-radius:7px;box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.seg.three{grid-template-columns:repeat(3,1fr)} .seg.three .th{width:calc((100% - 4px)/3)}
+.seg.four{grid-template-columns:repeat(4,1fr);flex:none} .seg.four .th{width:calc((100% - 4px)/4)}
+.lst .seg{flex:none}
+.seg.four button{font-size:12.5px}
+.ib{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--tint);flex:none}
+.ib svg{width:18px;height:18px}
+.ib:disabled{color:var(--faint)}
+
+/* Flip card */
+.stage{flex:1;min-height:0;position:relative;perspective:1800px}
+.flip{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.flip.flipped{transform:rotateY(180deg)}
+.flip.enter{opacity:0;transform:translateY(22px) scale(.97)}
+.flip.leave-l{opacity:0;transform:translateX(-36px) rotate(-2.5deg)}
+.flip.leave-r{opacity:0;transform:translateX(36px) rotate(2.5deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--card);border-radius:28px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.face.back{transform:rotateY(180deg)}
+.scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+
+/* Poster: the one bold element */
+.poster{position:relative;height:clamp(180px,32vh,280px);background:var(--c2);overflow:hidden;isolation:isolate;flex:none}
+.poster::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0) 55%),linear-gradient(to bottom,rgba(0,0,0,.28),rgba(0,0,0,0) 28%)}
+.poster .bg{position:absolute;inset:-40px;z-index:-3;background-size:cover;background-position:center;filter:blur(30px) saturate(1.25) brightness(.85);transform:scale(1.15)}
+.poster .pc{position:absolute;right:16px;bottom:16px;height:calc(100% - 62px);aspect-ratio:2/3;object-fit:cover;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.45);opacity:0;transition:opacity .4s}
+.poster.cover-in .pc{opacity:1}
+.poster.has-cover .art,.poster.has-cover .kanji{display:none}
+.poster.has-cover .pt{right:calc(30px + (100% - 62px)*.667)}
+.sw{position:relative}.sw .swimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.art{position:absolute;inset:0;width:100%;height:100%;z-index:-2;display:block}
+.kanji{position:absolute;right:3%;top:-6%;bottom:-6%;writing-mode:vertical-rl;font-family:var(--mark);font-weight:800;font-size:clamp(88px,26vw,132px);line-height:.9;color:#fff;opacity:.13;white-space:nowrap;pointer-events:none;letter-spacing:-.03em}
+.pt{position:absolute;left:20px;right:20px;bottom:18px;color:#fff}
+.pt .meta{font-size:13px;font-weight:500;color:rgba(255,255,255,.82)}
+.pt h2{margin:4px 0 0;font-family:var(--disp);font-weight:700;font-size:clamp(26px,7.2vw,32px);line-height:1.04;letter-spacing:-.026em;text-wrap:balance}
+.ptop{position:absolute;left:16px;right:16px;top:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.match{display:flex;align-items:baseline;gap:4px;color:#fff;background:rgba(0,0,0,.28);padding:5px 11px 6px;border-radius:999px}
+.match b{font-family:var(--disp);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.match span{font-size:12px;font-weight:500;opacity:.85}
+.cover{display:flex;align-items:center;gap:5px;color:#fff;background:rgba(0,0,0,.28);padding:6px 11px;border-radius:999px;font-size:12.5px;font-weight:600}
+.cover svg{width:13px;height:13px}
+
+.fb{padding:16px 20px 18px;display:flex;flex-direction:column;gap:16px}
+.desc{margin:0;font-size:15.5px;line-height:1.5;max-width:62ch}
+.fit{display:flex;flex-direction:column;gap:12px;background:var(--fill2);border-radius:16px;padding:14px 14px 16px}
+.fit h3{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.fit p{margin:0;font-size:14.5px;line-height:1.48;color:var(--text)}
+.chart{display:grid;grid-template-columns:6.6em 1fr 2.4em;gap:9px 10px;align-items:center;font-size:12.5px}
+.chart .n{color:var(--mute)}
+.chart .v{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
+.track{position:relative;height:8px}
+.track::before{content:"";position:absolute;left:33.3%;top:-3px;bottom:-3px;width:1px;background:var(--line)}
+.track i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--tint)}
+.track i.neg{background:var(--faint)}
+.legend{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mute);padding-left:calc(6.6em + 10px);padding-right:calc(2.4em + 10px)}
+.tip{font-size:14px;line-height:1.45;color:var(--text);border-top:.5px solid var(--line);padding-top:12px}
+.tip b{font-weight:600}
+
+.actions{flex:none;display:grid;grid-template-columns:.95fr .8fr 1.25fr 1fr;gap:8px;padding:10px 12px 12px;border-top:.5px solid var(--line);background:var(--card)}
+.actions.cal{grid-template-columns:1fr 2fr}
+.btn{height:50px;border-radius:14px;font-size:15.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--fill);transition:transform .1s,opacity .2s}
+.btn svg{width:17px;height:17px}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn.primary{background:var(--tint);color:var(--onTint)}
+.btn.quiet{color:var(--mute)}
+.actions .btn{font-size:14.5px;gap:5px;padding:0 4px}
+.actions .btn svg{width:15px;height:15px}
+.btn.outline{color:var(--tint)}
+.btn:disabled{opacity:.35}
+
+/* Back face */
+.bh{flex:none;display:flex;align-items:center;gap:12px;padding:14px 16px 12px;border-bottom:.5px solid var(--line)}
+.bh .sw{width:36px;height:46px}
+.bh .t{flex:1;min-width:0}
+.bh .t b{display:block;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bh .t span{font-size:12.5px;color:var(--mute)}
+.link{color:var(--tint);font-size:16px;font-weight:500;padding:6px 2px}
+.bb{padding:18px 20px 20px;display:flex;flex-direction:column;gap:22px}
+.qh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.qh h3{margin:0;font-size:15px;font-weight:600}
+.qh .hint{font-size:12.5px;color:var(--mute)}
+.big{font-family:var(--disp);font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1;min-height:34px;transition:color .2s}
+.big.unset{color:var(--faint)}
+.rng{-webkit-appearance:none;appearance:none;width:100%;height:36px;background:transparent;margin:0;--p:50%;cursor:pointer}
+.rng::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--tint) 0 var(--p),var(--fill) var(--p) 100%)}
+.rng::-moz-range-track{height:6px;border-radius:3px;background:var(--fill)}
+.rng::-moz-range-progress{height:6px;border-radius:3px;background:var(--tint)}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-11px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2),0 0 0 .5px rgba(0,0,0,.08);transition:transform .15s}
+.rng:active::-webkit-slider-thumb{transform:scale(1.1)}
+.rng::-moz-range-thumb{width:28px;height:28px;border:0;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.rng.unset::-webkit-slider-runnable-track{background:var(--fill)}
+.rng.unset::-webkit-slider-thumb{background:var(--card);box-shadow:0 0 0 2px var(--faint)}
+.scale{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mute);margin-top:2px}
+.scale button{padding:4px 0;flex:1;text-align:center;font-size:11.5px;color:var(--mute)}
+.scale button:first-child{text-align:left}.scale button:last-child{text-align:right}
+.scale button.on{color:var(--text);font-weight:600}
+.aspects{display:flex;flex-direction:column;gap:2px;background:var(--fill2);border-radius:16px;padding:6px 14px}
+.asp{display:grid;grid-template-columns:6.4em 1fr 4.6em;gap:12px;align-items:center;min-height:44px}
+.asp label{font-size:14.5px}
+.asp output{font-size:12.5px;color:var(--mute);text-align:right}
+.asp .rng{height:30px}
+.asp .rng::-webkit-slider-thumb{width:22px;height:22px;margin-top:-8px}
+.asp .rng::-moz-range-thumb{width:22px;height:22px}
+.asp .rng{--a:50%;--b:50%}
+.asp .rng::-webkit-slider-runnable-track{background:linear-gradient(to right,var(--fill) 0 var(--a),var(--tint) var(--a) var(--b),var(--fill) var(--b) 100%)}
+.asp .rng.neg::-webkit-slider-runnable-track{background:linear-gradient(to right,var(--fill) 0 var(--a),var(--faint) var(--a) var(--b),var(--fill) var(--b) 100%)}
+.ends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mute);padding:0 4.6em 4px 7.2em}
+.row2{display:flex;align-items:center;justify-content:space-between;min-height:44px;font-size:15px}
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--fill);transition:background .2s}
+.switch span::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.switch input:checked+span{background:var(--tint)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.backact{flex:none;padding:10px 12px 12px;border-top:.5px solid var(--line)}
+.backact .btn{width:100%}
+
+.sw canvas{width:100%;height:100%;display:block}
+.sw{flex:none;border-radius:8px;background:radial-gradient(90% 80% at 80% 15%,var(--c1),var(--c2));display:grid;place-items:center;color:rgba(255,255,255,.88);font-family:var(--mark);font-weight:800;font-size:15px;writing-mode:vertical-rl;overflow:hidden;line-height:1}
+
+/* Favorites */
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.grp{background:var(--card);border-radius:14px;overflow:hidden}
+.item+.item{border-top:.5px solid var(--line)}
+.ir{width:100%;display:flex;align-items:center;gap:12px;padding:9px 14px;text-align:left;min-height:62px;box-sizing:border-box}
+.ir .sw{width:34px;height:44px;font-size:13px}
+.ir .t{flex:1;min-width:0}
+.ir .t b{display:block;font-size:15.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ir .t span{font-size:12.5px;color:var(--mute)}
+.ir .r{font-size:13px;color:var(--mute);white-space:nowrap}
+.ir .r.fav{color:var(--tint);font-weight:600}
+.ir svg.chev{width:12px;height:12px;color:var(--faint);transition:transform .25s;flex:none}
+.item.open svg.chev{transform:rotate(90deg)}
+.ex{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.2,.8,.2,1)}
+.item.open .ex{grid-template-rows:1fr}
+.ex>div{overflow:hidden}
+.exin{padding:2px 14px 14px 60px;display:flex;flex-direction:column;gap:12px}
+.exin p{margin:0;font-size:14px;line-height:1.48;color:var(--text)}
+.exin .soft{color:var(--mute)}
+.exact{display:flex;gap:16px}
+.exact button{color:var(--tint);font-size:14px;font-weight:500;padding:4px 0}
+.exact button.del{color:var(--mute)}
+.empty{display:grid;place-items:center;text-align:center;padding:40px 24px;color:var(--mute);line-height:1.5}
+.empty b{display:block;font-family:var(--disp);font-size:20px;color:var(--text);margin-bottom:6px;letter-spacing:-.015em}
+.done{position:absolute;inset:0;background:var(--card);border-radius:28px;box-shadow:var(--shadow);display:grid;place-items:center}
+
+/* Engine sheet */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;animation:fade .25s}
+.sheet[hidden]{display:none!important}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.sheetin{width:100%;max-width:480px;max-height:90%;background:var(--bg);border-radius:14px 14px 0 0;display:flex;flex-direction:column;animation:up .35s cubic-bezier(.2,.8,.2,1)}
+.sheethead{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:14px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+.sheethead h3{margin:0;font-size:17px;font-weight:600}
+.sheethead button{justify-self:end;color:var(--tint);font-weight:600;font-size:17px}
+.sheetbody{overflow-y:auto;padding:4px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:6px}
+.cap{font-size:13px;color:var(--mute);padding:16px 16px 4px}
+.foot{font-size:12.5px;color:var(--mute);padding:4px 16px 8px;line-height:1.45}
+.cell{padding:11px 16px;display:flex;align-items:center;gap:12px}
+.cell+.cell{border-top:.5px solid var(--line)}
+.wcell{display:grid;grid-template-columns:1fr 3em;gap:2px 10px;align-items:center}
+.wcell .rng{grid-column:1/-1;height:28px}
+.wcell output{text-align:right;color:var(--mute);font-size:13px;font-variant-numeric:tabular-nums}
+.wcell .sub{font-size:12px;color:var(--mute)}
+.linkbtn{color:var(--tint);font-size:15px;padding:12px 16px;text-align:left;width:100%}
+
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:30;opacity:0;transition:opacity .22s,transform .22s;white-space:nowrap;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.flip{transition:opacity .2s}.flip.flipped{transform:none}.flip.flipped .front{opacity:0;pointer-events:none}.face.back{transform:none;opacity:0;pointer-events:none}.flip.flipped .face.back{opacity:1;pointer-events:auto}*{animation:none!important}}
+@media (max-height:700px){.poster{height:160px}.fb{gap:14px}}
+@media (min-width:700px){.app{max-width:640px;padding-block:18px 20px}.poster{height:clamp(260px,34vh,400px)}.desc{font-size:17px}.fit p{font-size:15.5px}}
+</style>
+</head><body>
+
+
+<div class="app">
+  <div class="hdr">
+    <div class="seg three" id="tabs" role="tablist" aria-label="Section">
+      <div class="th"></div>
+      <button role="tab" data-t="discover" aria-selected="true">Discover</button>
+      <button role="tab" data-t="watch" aria-selected="false">Watchlist</button>
+      <button role="tab" data-t="favs" aria-selected="false">Favorites</button>
+    </div>
+    <button class="ib" id="bUndo" aria-label="Undo last answer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg></button>
+    <button class="ib" id="bEngine" aria-label="Taste engine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+  </div>
+  <section class="stage" id="stage" aria-live="polite"></section>
+  <section class="lst" id="favs" hidden></section>
+</div>
+
+<div class="sheet" id="engSheet" hidden><div class="sheetin" role="dialog" aria-labelledby="et">
+  <div class="sheethead"><span></span><h3 id="et">Taste Engine</h3><button data-close>Done</button></div>
+  <div class="sheetbody" id="engBody"></div></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+const AXES=[
+ {k:"w",n:"Writing",d:"Story depth, characters, payoff",ph:"great writing"},
+ {k:"a",n:"Animation",d:"Craft and fight choreography",ph:"top-level animation"},
+ {k:"m",n:"Mature tone",d:"Seinen themes, moral grey",ph:"a mature, adult tone"},
+ {k:"o",n:"Originality",d:"Quirky, unlike anything else",ph:"a very original idea"},
+ {k:"x",n:"Action",d:"Fights and adrenaline",ph:"great fights"},
+ {k:"h",n:"Humor",d:"Smart comedy",ph:"smart humor"},
+ {k:"d",n:"Auteur style",d:"A director's signature look",ph:"a strong director's style"},
+ {k:"sp",n:"Sports",d:"Sports drama done well",ph:"sports drama done right"},
+ {k:"f",n:"Fan service",d:"Penalty"},
+ {k:"s",n:"Slow start",d:"Penalty"},
+ {k:"g",n:"Generic hype",d:"Penalty: basic story, shallow power trip"}
+];
+const AX=Object.fromEntries(AXES.map(a=>[a.k,a]));
+const BASE={w:3,a:2.2,m:1.4,o:1.4,x:1,h:.5,d:1.6,sp:.5,f:-2.2,s:-1,g:-1.8};
+
+const RAW=[
+["monster","Monster","MONSTER",2004,"Series","74 eps","Madhouse","#3b2f2a","#8a1c1c","10 7 9 7 3 1 8 0 0 4 0","Naoki Urasawa wrote Pluto. This is his masterpiece: a slow-burn thriller about a surgeon chasing a killer he once saved. Pure writing, zero fan service."],
+["champloo","Samurai Champloo","サムライチャンプルー",2004,"Series","26 eps","Manglobe","#c7772a","#2d3a4f","7 9 6 9 8 6 10 0 1 2 0","From Shinichiro Watanabe, the Cowboy Bebop director. Hip-hop meets Edo-era sword fights. The closest thing to Afro Samurai's style with Bebop's soul."],
+["dorohedoro","Dorohedoro","ドロヘドロ",2020,"Series","12 eps","MAPPA","#4d5a2a","#1d1b16","7 8 8 10 8 7 8 0 1 2 0","Grimy, violent and very funny. If Chainsaw Man's quirkiness is what you love, this is the purest dose of it."],
+["parasyte","Parasyte -the maxim-","寄生獣",2014,"Series","24 eps","Madhouse","#2f4f4a","#9b2335","8 6 7 7 7 2 5 0 1 2 0","A classic seinen body-horror story with real philosophy about what makes us human. Tight, complete, no filler."],
+["crybaby","Devilman Crybaby","デビルマン",2018,"Series","10 eps","Science SARU","#6a1b4d","#121212","8 8 10 10 7 1 10 0 5 1 0","Masaaki Yuasa's brutal, artistic remake. Ten episodes that hit hard. Warning: it has explicit sexual content, used for the story but strong."],
+["pingpong","Ping Pong the Animation","ピンポン",2014,"Series","11 eps","Tatsunoko","#e05a2b","#1f6f8b","9 8 6 10 3 4 10 9 0 3 0","Often called the best sports anime ever. Yuasa's art looks rough at first, then you realize every frame is deliberate. Like Haikyu with a seinen heart."],
+["ippo","Hajime no Ippo","はじめの一歩",2000,"Series","75 eps + sequels","Madhouse","#b0302a","#e8c34a","8 7 5 6 9 6 6 10 0 3 0","The king of boxing anime. Great fights, real character growth, and great comedy between the matches. Long but rarely boring."],
+["slamdunk","The First Slam Dunk","スラムダンク",2022,"Movie","124 min","Toei","#d4411e","#1b2a49","8 10 6 7 7 3 9 10 0 1 0","Takehiko Inoue, the author of Vagabond, directed this himself. Stunning basketball animation and a mature emotional story."],
+["kamuy","Golden Kamuy","ゴールデンカムイ",2018,"Series","4 seasons","Geno Studio","#7a5a2e","#d8d2c4","8 6 8 9 8 8 6 0 1 2 0","Gold hunt in snowy Hokkaido after the Russo-Japanese war. Violent, smart, and strangely hilarious. Early CGI bears are weak; the story is not."],
+["tengoku","Heavenly Delusion","天国大魔境",2023,"Series","13 eps","Production I.G","#2b6c8a","#e2b13c","9 9 8 9 5 3 7 0 3 3 0","A mystery in a ruined Japan, told on two timelines. Beautiful animation and real puzzles. Some adult themes, handled with care."],
+["dunmeshi","Delicious in Dungeon","ダンジョン飯",2024,"Series","24 eps","Trigger","#5f7a2f","#c9893c","9 8 4 9 6 7 7 0 0 2 0","Fantasy dungeon crawl where they cook the monsters. Sounds silly, but the world-building is Frieren-level. Smart, warm, very original."],
+["orb","Orb: On the Movements of the Earth","チ。",2024,"Series","25 eps","Madhouse","#1e2540","#c9a45a","10 7 8 9 2 1 7 0 0 4 0","People risking death in 15th-century Europe for the truth about the sky. Heavy, philosophical writing, close to Vinland Saga in spirit."],
+["lookback","Look Back","ルックバック",2024,"Movie","58 min","Studio Durian","#8fb3c9","#f2ece0","10 10 7 8 0 2 10 0 0 0 0","By Tatsuki Fujimoto, the Chainsaw Man author. A short film about two girls who draw manga. As an artist, this one will hit you."],
+["stranger","Sword of the Stranger","ストレンヂア",2007,"Movie","103 min","Bones","#6b2a1f","#d9c7a0","7 10 7 5 10 1 8 0 0 0 0","Possibly the best sword fights ever animated. Simple story, but the craft is Vagabond-meets-Afro-Samurai."],
+["mugen","Blade of the Immortal -Immortal-","無限の住人",2019,"Series","24 eps","LIDENFILMS","#3a3a3a","#a32626","7 6 9 6 8 2 5 0 1 3 0","An immortal swordsman pays for his past one kill at a time. Very adult, very bloody. The manga art is legendary; the anime is solid."],
+["dororo","Dororo","どろろ",2019,"Series","24 eps","MAPPA / Tezuka Pro.","#5b3a29","#2c4a3e","8 7 7 6 8 2 6 0 0 2 0","A ronin hunts the demons who took his body parts. A dark Tezuka classic, retold for adults. Great if you like Vagabond's mood."],
+["akira","Akira","AKIRA",1988,"Movie","124 min","TMS","#c21f1f","#151515","8 10 8 9 8 1 10 0 0 1 0","The landmark of anime art. If you somehow missed it, this is homework for a designer."],
+["gitssac","Ghost in the Shell: Stand Alone Complex","攻殻機動隊",2002,"Series","52 eps","Production I.G","#1f3d4f","#7fc6c2","9 8 8 8 7 2 9 0 2 4 0","Smart cyberpunk police drama. If you like the Cyberpunk show, this is the deeper, older brother."],
+["ergo","Ergo Proxy","エルゴプラクシー",2006,"Series","23 eps","Manglobe","#2a2d34","#8f9ba8","7 8 8 9 5 0 8 0 1 6 0","Moody, philosophical sci-fi with a heavy style. Slow and confusing at first, rewarding if you stay."],
+["paprika","Paprika","パプリカ",2006,"Movie","90 min","Madhouse","#d6336c","#ffb627","8 10 7 10 3 3 10 0 2 1 0","Satoshi Kon's dream-heist film. Pure visual imagination. The film Inception borrowed from."],
+["perfectblue","Perfect Blue","パーフェクトブルー",1997,"Movie","81 min","Madhouse","#2a4bb0","#e6e6e6","9 8 10 9 3 0 10 0 3 2 0","Satoshi Kon's psychological thriller about a pop idol losing her grip. Masterful, but disturbing in parts."],
+["actress","Millennium Actress","千年女優",2001,"Movie","87 min","Madhouse","#a84a3a","#f0d9a6","9 9 6 9 2 3 10 0 0 2 0","Satoshi Kon again: a love letter to film history through one actress's life. Beautiful editing, very emotional."],
+["mononoke","Mononoke","モノノ怪",2007,"Series","12 eps","Toei","#c23b22","#e9d8a6","8 10 8 10 4 1 10 0 1 4 0","Looks like a moving ukiyo-e print. A mysterious medicine seller solves ghost cases. One of the most artistic anime ever made."],
+["mushishi","Mushishi","蟲師",2005,"Series","26 eps + sequels","Artland","#3d5a3a","#c8c19a","9 9 7 8 1 1 8 0 0 6 0","Quiet, beautiful folk stories. Slow, but if Frieren worked for you, this might too. Watch one episode at a time, like a short story."],
+["ousama","Ranking of Kings","王様ランキング",2021,"Series","23 eps","Wit Studio","#e6b85c","#5b7fa6","9 8 5 8 7 4 7 0 0 3 0","Looks like a children's book, then turns dark and moving. Great fights later. Don't judge it by the art."],
+["fumetsu","To Your Eternity","不滅のあなたへ",2021,"Series","3 seasons","Brain's Base","#6c8ea6","#e8e2d4","8 6 7 8 4 2 5 0 0 3 0","An immortal being learns to be human through the people it loses. Episode 1 alone is unforgettable. Animation is plain."],
+["steins","Steins;Gate","シュタインズ・ゲート",2011,"Series","24 eps","White Fox","#4a3b2a","#c9a227","9 6 6 8 2 6 6 0 2 7 0","Time-travel thriller with one of the best payoffs in anime. The first 8 episodes are slow; trust the process."],
+["fatezero","Fate/Zero","フェイト/ゼロ",2011,"Series","25 eps","ufotable","#2b2f4a","#c9a14a","8 10 8 6 9 1 7 0 1 5 0","The same studio as Demon Slayer, but with a much darker, smarter story. Heroes from history fight a death match for a wish."],
+["jojo","JoJo's Bizarre Adventure","ジョジョの奇妙な冒険",2012,"Series","6 parts","David Production","#7b2fa1","#f2c12e","7 8 5 10 9 8 9 0 1 3 0","The most stylish shonen ever. Every fight is a puzzle. Start from Part 1; it really takes off in Part 3 and 4."],
+["baccano","Baccano!","バッカーノ!",2007,"Series","16 eps","Brain's Base","#5a2d1a","#d4a04c","8 7 8 10 7 7 8 0 1 5 0","Gangsters, immortals and a train massacre in 1930s America, told out of order. Confusing for 2 episodes, then brilliant."],
+["pretender","Great Pretender","グレートプリテンダー",2020,"Series","23 eps","Wit Studio","#f05a7e","#2ec4b6","7 9 5 8 4 7 8 0 1 2 0","Con-artist heists across the world. Bold colors, very designed. Fun and stylish."],
+["oddtaxi","Odd Taxi","オッドタクシー",2021,"Series","13 eps","OLM","#f2a541","#2d3047","10 5 7 10 2 7 8 0 0 4 0","Cute animal characters, but a very adult crime story. Some of the best writing of the decade. Every line matters."],
+["sakamoto","Sakamoto Days","サカモトデイズ",2025,"Series","22 eps","TMS","#f2c14e","#2c3e50","6 6 4 7 9 8 5 0 0 2 1","A retired legendary hitman now runs a shop. Very fun action-comedy. The manga's fights look better than the anime's."],
+["lazarus","Lazarus","ラザロ",2025,"Series","13 eps","MAPPA","#c0392b","#1c2833","6 9 7 6 9 3 10 0 0 3 0","Watanabe's newest, with fights by John Wick's choreographer. The style is incredible; the story is good but not Bebop."],
+["dandy","Space Dandy","スペース☆ダンディ",2014,"Series","26 eps","Bones","#ff5fa2","#3a0ca3","6 9 4 10 5 9 10 0 4 2 0","Watanabe's crazy comedy. Every episode a different guest director and style. Some cheesy fan service jokes."],
+["zankyou","Terror in Resonance","残響のテロル",2014,"Series","11 eps","MAPPA","#d9d9d9","#33415c","7 8 8 7 4 1 9 0 0 3 0","Watanabe's short thriller about two teen bombers in Tokyo. Beautiful, tense, music by Yoko Kanno."],
+["akudama","Akudama Drive","アクダマドライブ",2020,"Series","12 eps","Pierrot","#ff2e63","#08d9d6","7 8 7 9 8 4 7 0 1 2 0","Neon cyberpunk criminals on one big job. Short, stylish, violent. Great after Cyberpunk Edgerunners."],
+["gurren","Gurren Lagann","天元突破グレンラガン",2007,"Series","27 eps","Gainax","#e63946","#1d3557","8 9 4 10 10 7 9 0 5 3 0","The most hype anime ever made, with a real story about growing up. Warning: one character is drawn with a lot of fan service."],
+["promare","Promare","プロメア",2019,"Movie","111 min","Trigger","#ff4d6d","#4cc9f0","6 10 3 9 10 6 9 0 2 1 1","Two hours of pure color and fights. Simple story, incredible design. Great for a designer's eye."],
+["bluelock","Blue Lock","ブルーロック",2022,"Series","2 seasons","8bit","#1d4ed8","#0f172a","5 6 4 7 8 4 5 10 0 2 3","Football battle royale. Pure adrenaline, like Solo Leveling but for sports. On your edge; season 2 animation dropped."],
+["kazetsuyo","Run with the Wind","風が強く吹いている",2018,"Series","23 eps","Production I.G","#7fb069","#e6aa68","9 8 6 6 2 4 6 10 0 4 0","Ten university students train for Japan's biggest relay race. Grounded and adult. Fans of Haikyu often call it a hidden gem."],
+["megalobox","Megalobox","メガロボクス",2018,"Series","13 eps + S2","TMS","#c44536","#283d3b","7 8 6 7 8 2 8 9 0 2 0","Gritty, stylish boxing. The look is very close to Afro Samurai: grain, color, hip-hop soundtrack."],
+["kekkai","Blood Blockade Battlefront","血界戦線",2015,"Series","2 seasons","Bones","#d62828","#003049","6 9 5 9 8 6 8 0 1 4 0","By the Trigun author. A crazy monster city with Bones-level animation. The plot is loose, the style is great."],
+["michiko","Michiko & Hatchin","ミチコとハッチン",2008,"Series","22 eps","Manglobe","#e9c46a","#264653","7 8 6 8 5 4 8 0 2 4 0","Road trip through a Brazil-like world. From the team behind Samurai Champloo. Warm, stylish, underrated."],
+["tybw","Bleach: Thousand-Year Blood War","千年血戦篇",2022,"Series","4 cours","Pierrot","#111111","#c8102e","7 10 5 6 10 3 8 0 1 1 1","If you missed it: the final Bleach arc, finally animated, and it looks stunning. The Bleach you loved, at its peak."],
+["frieren2","Frieren Season 2","葬送のフリーレン",2026,"Series","Season 2","Madhouse","#7aa6c2","#e8e4d8","9 9 6 7 5 4 7 0 0 3 0","Only if you haven't caught it yet: the second season continues the same quiet, beautiful journey."],
+["reze","Chainsaw Man: Reze Arc","レゼ篇",2025,"Movie","100 min","MAPPA","#f25c05","#1a1a1a","9 10 8 9 9 6 9 0 3 1 0","If you haven't seen it: the movie continues Chainsaw Man. Many fans say it's better than the series."],
+["takopi","Takopi's Original Sin","タコピーの原罪",2025,"Series","6 eps","Enishiya","#ff8fab","#4a4e69","10 8 9 10 0 1 8 0 0 1 0","Looks cute, is not. A very dark short story about kids, bullying and family. Six episodes you won't forget. Heavy themes."],
+["hikaru","The Summer Hikaru Died","光が死んだ夏",2025,"Series","12 eps","CygamesPictures","#3c6e47","#e9e3c8","8 9 8 9 2 1 8 0 0 4 0","Rural horror with beautiful, creepy animation. A friend comes back and is not really him. Slow but tense."],
+["spyfam","Spy x Family","スパイファミリー",2022,"Series","3 seasons","Wit / CloverWorks","#e76f51","#2a9d8f","7 8 3 7 6 8 6 0 0 1 1","Light and charming. Probably on your edge, like Apothecary Diaries. Here so the engine can learn."],
+["kaguya","Kaguya-sama: Love Is War","かぐや様",2019,"Series","3 seasons","A-1 Pictures","#c9184a","#ffccd5","8 8 4 9 0 10 8 0 1 2 0","A romance told like a war of brains. The smartest comedy since Gintama, very well directed."],
+["planetes","Planetes","プラネテス",2003,"Series","26 eps","Sunrise","#1b263b","#e0a458","9 6 7 8 1 4 7 0 0 5 0","Space garbage collectors in 2075. Real science, adult characters. By the Vinland Saga author, Makoto Yukimura."],
+["gits95","Ghost in the Shell","GHOST IN THE SHELL",1995,"Movie","82 min","Production I.G","#264653","#8ab17d","8 10 9 9 6 0 10 0 2 3 0","Mamoru Oshii's classic. Slow, philosophical, gorgeous. A design reference as much as a film."],
+["ookami","Wolf Children","おおかみこども",2012,"Movie","117 min","Studio Chizu","#90be6d","#f9c74f","8 9 5 6 0 3 9 0 0 3 0","Mamoru Hosoda's film about a mother raising wolf kids. The closest feeling to Ghibli outside Ghibli."],
+["kiminona","Your Name","君の名は。",2016,"Movie","106 min","CoMix Wave","#ff7b54","#3a86ff","8 10 4 7 1 5 9 0 1 1 0","Makoto Shinkai's body-swap love story. Very famous, may already be in your seen list."],
+["violet","Violet Evergarden","ヴァイオレット",2018,"Series","13 eps + films","Kyoto Animation","#2a6f97","#f4d58d","8 10 5 6 3 1 8 0 0 4 0","A former child soldier learns emotions by writing letters. Some of the most beautiful animation ever made."],
+["erased","Erased","僕だけがいない街",2016,"Series","12 eps","A-1 Pictures","#4361ee","#f1faee","7 8 6 7 2 2 6 0 0 1 0","A man is sent back to his childhood to stop a murder. Very gripping. The ending splits people."],
+["deathparade","Death Parade","デス・パレード",2015,"Series","12 eps","Madhouse","#3c096c","#e0aaff","8 8 7 9 1 3 8 0 0 3 0","After death, people play games that judge their souls. Dark, clever, stylish."],
+["blueperiod","Blue Period","ブルーピリオド",2021,"Series","12 eps","Seven Arcs","#1d3557","#a8dadc","7 6 5 7 0 3 5 0 0 3 0","A student discovers painting and tries to get into art school. You'll recognize the creative struggle. The manga is better than the anime."],
+["vivy","Vivy: Fluorite Eye's Song","ヴィヴィ",2021,"Series","13 eps","Wit Studio","#4ea8de","#f72585","8 9 5 8 8 2 7 0 0 2 0","An AI singer travels in time to stop an AI war. Great fights and a tight story in 13 episodes."],
+["86","86 Eighty-Six","エイティシックス",2021,"Series","23 eps","A-1 Pictures","#6b705c","#cb997e","8 8 7 7 7 1 7 0 1 3 0","War story about kids forced to pilot drones. Serious and well directed."],
+["trigunst","Trigun Stampede","トライガン",2023,"Series","12 eps","Orange","#d00000","#ffba08","7 9 6 7 8 4 7 0 0 2 0","A modern CGI remake of Trigun with a darker story. Looks great. Old Trigun fans are split, but it's a fresh take."],
+["vhd","Vampire Hunter D: Bloodlust","吸血鬼ハンターD",2000,"Movie","103 min","Madhouse","#2b2d42","#8d0801","6 10 8 6 9 1 9 0 2 1 0","Gothic and gorgeous. If you liked Hellsing's mood, this is the art-film version."],
+// Second chance cards
+["kingdom","Kingdom (second chance)","キングダム",2012,"Series","6 seasons","Pierrot","#7f5539","#ddb892","8 6 7 6 9 3 5 0 1 6 0","You struggled with season 1. You were right: its 3D is bad. But the story is a huge war epic, like a Chinese Vinland Saga, and the animation gets much better.","Push through season 1 fast, or skip it with a recap. Season 3 is where most people fall in love.","second"],
+["geass","Code Geass (second chance)","コードギアス",2006,"Series","2 seasons","Sunrise","#4a148c","#c62828","8 7 6 9 7 4 7 0 4 2 0","You saw season 1. R2 is more intense, and the final episode is one of the most famous endings in anime. Some fan service, but less than Fire Force.","Go straight to R2 episode 1; you remember enough.","second"],
+["psychopass","Psycho-Pass (second chance)","サイコパス",2012,"Series","22 eps","Production I.G","#0b3954","#08a4bd","9 8 9 8 6 1 8 0 1 6 0","Not just you: episode 1 is a dry setup. But the writer is Gen Urobuchi (Fate/Zero), and the villain is one of anime's best. Very seinen.","Give it until episode 4. Season 1 only; skip season 3 and later if you don't love it.","second"],
+["yyh","Yu Yu Hakusho (second chance)","幽☆遊☆白書",1992,"Series","112 eps","Pierrot","#2a9d8f","#e76f51","7 6 4 6 9 6 6 0 0 7 0","The first 25 episodes are mostly ghost-of-the-week. The real show, the one that shaped Hunter x Hunter and Bleach, starts after that.","Jump to episode 26 and start the Dark Tournament story.","second"],
+["rezero","Re:Zero","リゼロ",2016,"Series","3 seasons","White Fox","#3a5a98","#e7ecef","8 7 7 7 6 4 5 0 4 3 4","You heard it's good. It is darker than most isekai: the hero dies and restarts, and it hurts. Some fan service, about Mushoku-light, not Mushoku-bad."]
+];
+// Batch 2: deeper auteur and cult picks (added after the first 12 ratings)
+const RAW2=[
+["tatami","The Tatami Galaxy","四畳半神話大系",2010,"Series","11 eps","Madhouse","#d9a441","#2f5d50","9 8 6 10 1 8 10 0 1 4 0","Masaaki Yuasa again, the director of Ping Pong and Crybaby, which you loved. A student relives his college years in loops. Fast, funny, and a real emotional ending."],
+["kaiba","Kaiba","カイバ",2008,"Series","12 eps","Madhouse","#5fa8d3","#f2d0a4","9 8 8 10 3 2 10 0 1 4 0","Yuasa's sci-fi about a world where memories are bought and sold. Looks like a children's book, hits like seinen. Very few people have seen it."],
+["mindgame","Mind Game","マインド・ゲーム",2004,"Movie","103 min","Studio 4°C","#e63946","#f1c40f","8 9 7 10 5 7 10 0 3 2 0","Yuasa's first film and his wildest. Mixed media, pure energy, and a strong heart under it. Closer to Ping Pong than to Paprika."],
+["inuoh","Inu-Oh","犬王",2021,"Movie","98 min","Science SARU","#3a0ca3","#f77f00","7 9 6 10 3 3 10 0 0 3 0","Yuasa's rock opera set in 14th-century Japan. A cursed dancer and a blind musician become stars. Stunning concert scenes."],
+["eizouken","Keep Your Hands Off Eizouken!","映像研には手を出すな!",2020,"Series","12 eps","Science SARU","#2ec4b6","#ff9f1c","8 8 4 10 2 7 10 0 0 2 0","Three girls start an anime club, and their sketches come alive on screen. A love letter to design and making things. Made for a creative director."],
+["redline","Redline","レッドライン",2009,"Movie","102 min","Madhouse","#ef233c","#ffd166","6 10 4 9 10 5 10 0 3 1 0","Seven years of hand-drawn animation for one crazy space race. Simple story, but possibly the most intense animation ever made."],
+["tekkon","Tekkonkinkreet","鉄コン筋クリート",2006,"Movie","111 min","Studio 4°C","#f4a261","#2a9d8f","8 10 7 9 6 3 10 0 0 3 0","Two street kids protect their city from gangsters. The city itself is the star, drawn in incredible detail. Taiyo Matsumoto's manga, made into film."],
+["texhnolyze","Texhnolyze","テクスノライズ",2003,"Series","22 eps","Madhouse","#3d3d3d","#9a8c98","8 7 10 9 6 0 9 0 0 9 0","The darkest, most adult show on this list. An underground city falling apart. Very slow at first, then unforgettable."],
+["lain","Serial Experiments Lain","serial experiments lain",1998,"Series","13 eps","Triangle Staff","#e5e5e5","#9d0208","8 6 9 10 1 0 9 0 0 6 0","A quiet girl gets lost inside the internet, made in 1998 and still ahead of its time. Strange, cold, and very designed."],
+["gankutsuou","Gankutsuou","巌窟王",2004,"Series","24 eps","Gonzo","#7209b7","#ffbe0b","8 9 7 10 3 1 10 0 1 4 0","The Count of Monte Cristo in space. Clothes and hair are filled with moving textile patterns. A one-of-a-kind visual idea."],
+["shinsekai","From the New World","新世界より",2012,"Series","25 eps","A-1 Pictures","#588157","#dad7cd","9 6 9 8 4 1 6 0 3 6 0","A calm future village hides a terrible history. A slow start, then one of the best world-building stories in anime."],
+["dennou","Dennou Coil","電脳コイル",2007,"Series","26 eps","Madhouse","#48cae4","#ffb703","8 8 4 8 3 4 8 0 0 5 0","Kids in a city with augmented-reality glasses, years before that was real. Smart sci-fi with a Ghibli-like warmth."],
+["mononokemovie","Mononoke the Movie","劇場版モノノ怪",2024,"Movie","Trilogy","EOTA","#c1121f","#fdf0d5","7 10 7 10 4 1 10 0 0 3 0","You loved Mononoke. The Medicine Seller returns in a new film trilogy, set inside the women's palace. Same ukiyo-e style, bigger scale."],
+["casshern","Casshern Sins","キャシャーン Sins",2008,"Series","24 eps","Madhouse","#6c757d","#e9c46a","7 8 8 7 8 0 8 0 0 6 0","A dying world of robots and the warrior who caused it. Melancholy, beautiful fights. It takes a few episodes to find its rhythm."],
+["bigo","The Big O","THE ビッグオー",1999,"Series","26 eps","Sunrise","#14213d","#fca311","7 8 6 9 6 2 9 0 1 4 0","Batman-style noir in a city where everyone lost their memories, plus giant robots. Very stylish, very 90s."],
+["flcl","FLCL","フリクリ",2000,"Series","6 eps","Gainax / I.G","#ff006e","#ffbe0b","7 10 5 10 8 8 10 0 4 2 0","Six episodes of pure chaos about growing up, with a great rock soundtrack. Some suggestive jokes, but short and iconic."],
+["ashita2","Ashita no Joe 2","あしたのジョー2",1980,"Series","47 eps","TMS","#9d0208","#ffba08","9 7 8 7 8 3 9 9 0 5 0","The boxing classic that inspired Megalobox, directed by Osamu Dezaki. Old, but the drama and the still-frame style still hit."],
+["logh","Legend of the Galactic Heroes: Die Neue These","銀河英雄伝説",2018,"Series","4 seasons","Production I.G","#1d3557","#c9a227","10 7 8 6 5 1 6 0 0 6 0","Space war as politics and strategy, two geniuses on opposite sides. Writing at the level of Vinland Saga. Slow and talky, in a good way."],
+["kaiji","Kaiji","カイジ",2007,"Series","2 seasons","Madhouse","#2b2d42","#ef233c","8 6 9 8 1 3 7 0 0 3 0","A man in debt plays deadly gambling games. Pure tension and psychology, like Death Note with dice."],
+["sakamichi","Kids on the Slope","坂道のアポロン",2012,"Series","12 eps","MAPPA / Tezuka Pro.","#264653","#e9c46a","8 8 5 6 0 4 9 0 0 3 0","Shinichiro Watanabe and Yoko Kanno, the Cowboy Bebop team, on friendship and jazz in 1960s Japan. The jam sessions are animated from real performances."],
+["pompo","Pompo: The Cinéphile","映画大好きポンポさん",2021,"Movie","90 min","CLAP","#ff8fab","#023e8a","7 9 4 8 1 6 9 0 2 1 0","A shy assistant gets to direct his first film. The editing is the star. A fun watch for anyone who makes creative work."]
+];
+
+// Shows Vito already told me about: used to calibrate the weights.
+const SEEN_RAW=[
+["c-onepiece","One Piece","ワンピース",1999,"Series","1100+ eps","Toei","#1f6fb2","#e9c46a","9 7 5 9 8 8 8 0 3 5 0"],
+["c-naruto","Naruto","ナルト",2002,"Series","720 eps","Pierrot","#f77f00","#1d3557","7 7 4 6 9 5 6 0 2 3 1"],
+["c-bleach","Bleach","ブリーチ",2004,"Series","366 eps","Pierrot","#111111","#e63946","6 8 4 6 9 5 8 0 3 2 2"],
+["c-berserk","Berserk (1997)","ベルセルク",1997,"Series","25 eps","OLM","#2b2b2b","#8d0801","10 7 10 8 8 1 8 0 4 3 0"],
+["c-vinland","Vinland Saga","ヴィンランド・サガ",2019,"Series","2 seasons","Wit / MAPPA","#4a6670","#d6ccc2","10 8 9 7 7 2 7 0 0 4 0"],
+["c-jjk","Jujutsu Kaisen","呪術廻戦",2020,"Series","Ongoing","MAPPA","#22223b","#4361ee","7 10 6 8 10 6 8 0 1 1 1"],
+["c-csm","Chainsaw Man","チェンソーマン",2022,"Series","12 eps","MAPPA","#f25c05","#1a1a1a","8 9 8 10 8 7 9 0 3 1 0"],
+["c-dandadan","Dandadan","ダンダダン",2024,"Series","Ongoing","Science SARU","#7209b7","#f72585","7 10 5 10 9 9 9 0 4 1 0"],
+["c-hxh","Hunter x Hunter","ハンター×ハンター",2011,"Series","148 eps","Madhouse","#2d6a4f","#f4a261","10 8 6 9 9 6 7 0 0 2 0"],
+["c-aot","Attack on Titan","進撃の巨人",2013,"Series","4 seasons","Wit / MAPPA","#5c3d2e","#b8b08d","10 9 8 8 9 1 7 0 0 2 0"],
+["c-fma","Fullmetal Alchemist: Brotherhood","鋼の錬金術師",2009,"Series","64 eps","Bones","#9b2226","#e9d8a6","10 8 6 7 8 6 6 0 0 1 0"],
+["c-pluto","Pluto","プルートウ",2023,"Series","8 eps","Studio M2","#3d405b","#e07a5f","10 9 9 7 4 1 8 0 0 2 0"],
+["c-frieren","Frieren","葬送のフリーレン",2023,"Series","28 eps","Madhouse","#7aa6c2","#e8e4d8","9 9 6 7 5 5 7 0 0 4 0"],
+["c-bebop","Cowboy Bebop","カウボーイビバップ",1998,"Series","26 eps","Sunrise","#264653","#e9c46a","9 8 7 9 7 6 10 0 1 2 0"],
+["c-deathnote","Death Note","デスノート",2006,"Series","37 eps","Madhouse","#111111","#b5b5b5","9 7 7 9 1 4 7 0 0 1 0"],
+["c-eva","Neon Genesis Evangelion","エヴァンゲリオン",1995,"Series","26 eps","Gainax","#5a189a","#80ed99","9 8 9 10 6 2 10 0 4 3 0"],
+["c-gintama","Gintama","銀魂",2006,"Series","367 eps","Sunrise","#adb5bd","#457b9d","8 6 5 10 7 10 7 0 3 3 0"],
+["c-mob","Mob Psycho 100","モブサイコ100",2016,"Series","3 seasons","Bones","#7b2cbf","#ffd60a","8 10 5 10 9 8 9 0 0 1 0"],
+["c-haikyu","Haikyu!!","ハイキュー!!",2014,"Series","4 seasons","Production I.G","#f77f00","#003049","8 9 5 7 6 7 7 10 0 2 0"],
+["c-afro","Afro Samurai","アフロサムライ",2007,"Series","5 eps","Gonzo","#000000","#c1121f","6 9 8 8 10 1 10 0 3 1 1"],
+["c-demonslayer","Demon Slayer","鬼滅の刃",2019,"Series","Ongoing","ufotable","#1b4332","#d00000","5 10 4 4 9 4 6 0 1 1 4"],
+["c-solo","Solo Leveling","俺だけレベルアップな件",2024,"Series","2 seasons","A-1 Pictures","#03045e","#7b2cbf","4 9 4 4 10 2 5 0 1 1 7"],
+["c-mushoku","Mushoku Tensei","無職転生",2021,"Series","Ongoing","Studio Bind","#606c38","#dda15e","8 9 7 7 6 3 6 0 9 3 4"],
+["c-mha","My Hero Academia","僕のヒーローアカデミア",2016,"Series","8 seasons","Bones","#2a9d8f","#e63946","7 8 4 6 9 5 6 0 3 2 3"],
+["c-blackclover","Black Clover","ブラッククローバー",2017,"Series","170 eps","Pierrot","#14213d","#606c38","5 7 3 5 9 4 5 0 3 6 5"],
+["c-apothecary","The Apothecary Diaries","薬屋のひとりごと",2023,"Series","Ongoing","OLM / TOHO","#9d0208","#ffba08","7 8 5 7 1 6 6 0 1 3 1"],
+["c-fireforce","Fire Force","炎炎ノ消防隊",2019,"Series","3 seasons","David Production","#d62828","#f77f00","5 9 4 7 8 4 7 0 9 2 3"],
+["c-fairytail","Fairy Tail","フェアリーテイル",2009,"Series","328 eps","A-1 / Satelight","#e63946","#f1c40f","4 6 2 4 8 5 4 0 7 2 6"],
+["c-shangrila","Shangri-La Frontier","シャングリラ・フロンティア",2023,"Series","2 seasons","C2C","#0077b6","#90e0ef","5 8 3 7 9 6 5 0 2 2 5"]
+];
+
+const toCard=(r,cal)=>{const v=r[9].split(" ").map(Number);const ax={};AXES.forEach((a,i)=>ax[a.k]=v[i]);
+ return {id:r[0],title:r[1].replace(" (second chance)",""),jp:r[2],year:r[3],kind:r[4],eps:r[5],studio:r[6],c1:r[7],c2:r[8],ax,desc:cal?"":r[10],tip:cal?"":(r[11]||""),second:!cal&&r[12]==="second",cal};};
+const CAT=[...RAW.map(r=>toCard(r,false)),...RAW2.map(r=>toCard(r,false))];
+const CAL=SEEN_RAW.map(r=>toCard(r,true));
+const ALL=[...CAT,...CAL];const byId=Object.fromEntries(ALL.map(c=>[c.id,c]));
+// ---------- Painted covers: original flat scenes, one motif per show, colors from its palette ----------
+const MOTIF={monster:"city",champloo:"sun",dorohedoro:"city",parasyte:"city",crybaby:"moon",pingpong:"court",ippo:"ring",slamdunk:"court",kamuy:"snow",tengoku:"city",dunmeshi:"forest",orb:"space",lookback:"sun",stranger:"mountains",mugen:"mountains",dororo:"forest",akira:"city",gitssac:"city",ergo:"city",paprika:"space",perfectblue:"city",actress:"moon",mononoke:"rain",mushishi:"forest",ousama:"mountains",fumetsu:"snow",steins:"city",fatezero:"moon",jojo:"sun",baccano:"desert",pretender:"sea",oddtaxi:"city",sakamoto:"city",lazarus:"city",dandy:"space",zankyou:"city",akudama:"city",gurren:"space",promare:"sun",bluelock:"court",kazetsuyo:"road",megalobox:"ring",kekkai:"city",michiko:"desert",tybw:"moon",frieren2:"mountains",reze:"rain",takopi:"sea",hikaru:"forest",spyfam:"city",kaguya:"moon",planetes:"space",gits95:"city",ookami:"forest",kiminona:"space",violet:"sea",erased:"snow",deathparade:"moon",blueperiod:"sun",vivy:"space","86":"desert",trigunst:"desert",vhd:"moon",kingdom:"desert",geass:"moon",psychopass:"city",yyh:"forest",rezero:"forest",
+ tatami:"city",kaiba:"space",mindgame:"sun",inuoh:"sea",eizouken:"city",redline:"desert",tekkon:"city",texhnolyze:"city",lain:"city",gankutsuou:"space",shinsekai:"forest",dennou:"city",mononokemovie:"rain",casshern:"desert",bigo:"city",flcl:"sun",ashita2:"ring",logh:"space",kaiji:"city",sakamichi:"sea",pompo:"sun",
+ "c-onepiece":"sea","c-naruto":"forest","c-bleach":"moon","c-berserk":"moon","c-vinland":"sea","c-jjk":"city","c-csm":"city","c-dandadan":"space","c-hxh":"forest","c-aot":"mountains","c-fma":"desert","c-pluto":"city","c-frieren":"mountains","c-bebop":"space","c-deathnote":"rain","c-eva":"sun","c-gintama":"city","c-mob":"city","c-haikyu":"court","c-afro":"mountains","c-demonslayer":"forest","c-solo":"city","c-mushoku":"forest","c-mha":"city","c-blackclover":"forest","c-apothecary":"moon","c-fireforce":"city","c-fairytail":"sea","c-shangrila":"space"};
+function hex(h){h=h.replace("#","");return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));}
+function mix(a,b,t){const A=hex(a),B=hex(b);return "rgb("+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")+")";}
+function rng(seed){let h=2166136261;for(const ch of seed)h=Math.imul(h^ch.charCodeAt(0),16777619);return ()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return ((h>>>0)%10000)/10000;};}
+function paintCover(cv,c){const dpr=Math.min(2,window.devicePixelRatio||1);const W=cv.clientWidth||cv.width,H=cv.clientHeight||cv.height;if(!W||!H)return;
+ cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);const x=cv.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);
+ const R=rng(c.id),m=MOTIF[c.id]||["city","mountains","sea","forest","moon"][Math.floor(R()*5)];
+ const A=c.c1,B=c.c2;const sh=t=>mix(B,"#000000",t),lt=t=>mix(A,"#ffffff",t);
+ const night=["space","moon","rain","city"].includes(m);
+ // sky
+ const g=x.createLinearGradient(0,0,0,H);
+ if(night){g.addColorStop(0,mix(B,"#000000",.55));g.addColorStop(1,mix(A,B,.5));}else{g.addColorStop(0,lt(.35));g.addColorStop(1,mix(A,B,.35));}
+ x.fillStyle=g;x.fillRect(0,0,W,H);
+ const disc=(cx,cy,r,col,halo)=>{if(halo){const hg=x.createRadialGradient(cx,cy,r*.6,cx,cy,r*2.6);hg.addColorStop(0,halo);hg.addColorStop(1,"rgba(255,255,255,0)");x.fillStyle=hg;x.beginPath();x.arc(cx,cy,r*2.6,0,7);x.fill();}x.fillStyle=col;x.beginPath();x.arc(cx,cy,r,0,7);x.fill();};
+ const ridge=(base,amp,step,col,seed)=>{x.fillStyle=col;x.beginPath();x.moveTo(0,H);let px=0;x.lineTo(0,base);while(px<W){px+=step*(.6+seed()*.8);x.lineTo(px,base-amp*(.2+seed()*.8));}x.lineTo(W,H);x.closePath();x.fill();};
+ const soft=(base,amp,col,ph)=>{x.fillStyle=col;x.beginPath();x.moveTo(0,H);for(let i=0;i<=W;i+=6)x.lineTo(i,base+Math.sin(i/W*Math.PI*1.6+ph)*amp);x.lineTo(W,H);x.closePath();x.fill();};
+ const stars=n=>{x.fillStyle="rgba(255,255,255,.85)";for(let i=0;i<n;i++){const s=R()*1.4+.3;x.fillRect(R()*W,R()*H*.7,s,s);}};
+ const skyline=(base,hmin,hmax,col,win)=>{let px=-10;while(px<W){const bw=14+R()*34,bh=hmin+R()*(hmax-hmin);x.fillStyle=col;x.fillRect(px,base-bh,bw,bh+H);
+   if(win){x.fillStyle=win;for(let wy=base-bh+6;wy<base-4;wy+=9)for(let wx=px+4;wx<px+bw-4;wx+=7)if(R()<.28)x.fillRect(wx,wy,3,4);}px+=bw+2;}};
+ const sx=W*(.25+R()*.4),sy=H*(.22+R()*.12),sr=Math.min(W,H)*(.12+R()*.06);
+ switch(m){
+  case "sun":disc(sx,sy,sr*1.2,lt(.75),"rgba(255,255,255,.35)");ridge(H*.72,H*.18,40,mix(A,B,.6),R);ridge(H*.84,H*.12,30,sh(.3),R);break;
+  case "moon":stars(70);disc(sx,sy,sr,lt(.85),"rgba(255,255,255,.18)");ridge(H*.8,H*.22,36,sh(.45),R);ridge(H*.9,H*.1,22,sh(.7),R);break;
+  case "mountains":disc(sx,sy,sr*.9,lt(.7),"rgba(255,255,255,.25)");ridge(H*.62,H*.3,55,mix(A,B,.45),R);ridge(H*.76,H*.24,42,mix(A,B,.7),R);ridge(H*.9,H*.16,30,sh(.4),R);break;
+  case "snow":ridge(H*.6,H*.32,60,lt(.85),R);ridge(H*.76,H*.2,40,mix(A,"#ffffff",.55),R);ridge(H*.9,H*.1,28,sh(.25),R);x.fillStyle="rgba(255,255,255,.8)";for(let i=0;i<90;i++){const s=R()*2+1;x.beginPath();x.arc(R()*W,R()*H,s,0,7);x.fill();}break;
+  case "city":stars(40);disc(sx,sy,sr*.8,lt(.8),"rgba(255,255,255,.15)");skyline(H*.8,H*.2,H*.45,mix(A,B,.7),null);skyline(H*.9,H*.12,H*.32,sh(.5),"rgba(255,230,160,.6)");x.fillStyle=sh(.7);x.fillRect(0,H*.9,W,H*.1);break;
+  case "rain":skyline(H*.85,H*.2,H*.5,mix(A,B,.75),null);skyline(H*.95,H*.1,H*.3,sh(.55),"rgba(255,255,255,.35)");x.strokeStyle="rgba(255,255,255,.28)";x.lineWidth=1;for(let i=0;i<120;i++){const rx=R()*W,ry=R()*H;x.beginPath();x.moveTo(rx,ry);x.lineTo(rx-4,ry+14);x.stroke();}break;
+  case "sea":disc(sx,sy+H*.12,sr*1.1,lt(.8),"rgba(255,255,255,.3)");x.fillStyle=mix(A,B,.6);x.fillRect(0,H*.58,W,H);x.fillStyle="rgba(255,255,255,.25)";for(let i=0;i<12;i++)x.fillRect(sx-sr*(1-i/14),H*.6+i*7,sr*2*(1-i/14),2);soft(H*.74,6,mix(A,B,.8),R()*6);soft(H*.86,7,sh(.35),R()*6);break;
+  case "forest":disc(sx,sy,sr,lt(.7),"rgba(255,255,255,.2)");for(let row=0;row<3;row++){const base=H*(.66+row*.12),col=row===0?mix(A,B,.5):row===1?mix(A,B,.75):sh(.45);x.fillStyle=col;let px=-10;while(px<W){const tw=14+R()*20,th=H*(.18+R()*.16);x.beginPath();x.moveTo(px,base);x.lineTo(px+tw/2,base-th);x.lineTo(px+tw,base);x.fill();px+=tw*.7;}x.fillRect(0,base,W,H);}break;
+  case "desert":disc(sx,sy,sr*1.25,lt(.8),"rgba(255,255,255,.3)");soft(H*.66,H*.05,mix(A,"#ffffff",.15),R()*6);soft(H*.76,H*.06,mix(A,B,.45),R()*6);soft(H*.88,H*.05,sh(.3),R()*6);break;
+  case "space":stars(160);const pr=Math.min(W,H)*.28,px2=W*(.3+R()*.4),py2=H*(.5+R()*.15);disc(px2,py2,pr,mix(A,B,.3),null);x.fillStyle="rgba(0,0,0,.35)";x.beginPath();x.arc(px2+pr*.35,py2+pr*.2,pr,0,7);x.fill();x.strokeStyle=lt(.6);x.lineWidth=3;x.beginPath();x.ellipse(px2,py2,pr*1.7,pr*.35,-.3,0,7);x.stroke();break;
+  case "court":{const hz=H*.5;x.fillStyle=mix(A,B,.3);x.fillRect(0,hz,W,H);x.strokeStyle="rgba(255,255,255,.6)";x.lineWidth=2;for(let i=-4;i<=4;i++){x.beginPath();x.moveTo(W/2+i*W*.05,hz);x.lineTo(W/2+i*W*.4,H);x.stroke();}x.beginPath();x.moveTo(0,H*.75);x.lineTo(W,H*.75);x.stroke();disc(W*(.3+R()*.4),H*.32,Math.min(W,H)*.08,lt(.85),"rgba(255,255,255,.3)");break;}
+  case "ring":{const cg=x.createRadialGradient(W/2,0,10,W/2,H*.4,H);cg.addColorStop(0,"rgba(255,255,255,.45)");cg.addColorStop(1,"rgba(255,255,255,0)");x.fillStyle=cg;x.fillRect(0,0,W,H);x.fillStyle=sh(.5);x.fillRect(0,H*.78,W,H);x.strokeStyle=lt(.5);x.lineWidth=4;[.5,.6,.7].forEach(t=>{x.beginPath();x.moveTo(0,H*t);x.lineTo(W,H*t-6);x.stroke();});x.fillStyle=sh(.7);x.fillRect(W*.08,H*.42,8,H*.4);x.fillRect(W*.9,H*.42,8,H*.4);break;}
+  case "road":disc(sx,H*.4,sr*1.2,lt(.8),"rgba(255,255,255,.3)");ridge(H*.6,H*.12,50,mix(A,B,.55),R);x.fillStyle=sh(.35);x.fillRect(0,H*.6,W,H);x.fillStyle=sh(.6);x.beginPath();x.moveTo(W*.48,H*.6);x.lineTo(W*.52,H*.6);x.lineTo(W*.8,H);x.lineTo(W*.2,H);x.fill();x.fillStyle="rgba(255,255,255,.7)";for(let i=0;i<6;i++){const t=i/6,y=H*.6+t*t*H*.4;x.fillRect(W/2-1-t*2,y,2+t*4,4+t*10);}break;
+ }
+ // paper grain
+ const n=Math.round(W*H/40);x.fillStyle="rgba(255,255,255,.05)";for(let i=0;i<n;i++)x.fillRect(R()*W,R()*H,1,1);
+ x.fillStyle="rgba(0,0,0,.06)";for(let i=0;i<n;i++)x.fillRect(R()*W,R()*H,1,1);}
+function paintAll(root){(root||document).querySelectorAll("canvas[data-paint]").forEach(cv=>{const c=byId[cv.dataset.paint];if(c)paintCover(cv,c);});}
+// ---------- Real covers from the AniList public API (loaded by the viewer's browser) ----------
+const Q_OVERRIDE={gits95:["Ghost in the Shell",1995],akira:["Akira",1988],"c-berserk":["Berserk",1997],kingdom:["Kingdom",2012],dororo:["Dororo",2019],
+ "c-hxh":["Hunter x Hunter (2011)"],"c-fma":["Fullmetal Alchemist: Brotherhood"],trigunst:["Trigun Stampede"],ippo:["Hajime no Ippo",2000],yyh:["Yu Yu Hakusho",1992],
+ ashita2:["Ashita no Joe 2"],reze:["Chainsaw Man Movie: Reze-hen"],frieren2:["Sousou no Frieren 2nd Season"],mononokemovie:["Mononoke Movie"],tybw:["Bleach: Sennen Kessen-hen"],
+ geass:["Code Geass: Hangyaku no Lelouch",2006],psychopass:["Psycho-Pass",2012],rezero:["Re:Zero kara Hajimeru Isekai Seikatsu",2016],"c-bleach":["Bleach",2004],"c-naruto":["Naruto",2002],
+ "c-onepiece":["One Piece",1999],"c-solo":["Solo Leveling",2024],"c-mushoku":["Mushoku Tensei",2021],"c-apothecary":["Kusuriya no Hitorigoto",2023],logh:["Legend of the Galactic Heroes: Die Neue These",2018],
+ "86":["86",2021],lain:["Serial Experiments Lain"],"c-aot":["Shingeki no Kyojin",2013],"c-mob":["Mob Psycho 100",2016],"c-jjk":["Jujutsu Kaisen",2020],"c-csm":["Chainsaw Man",2022],
+ "c-frieren":["Sousou no Frieren",2023],"c-vinland":["Vinland Saga",2019],"c-haikyu":["Haikyuu!!",2014],"c-dandadan":["Dandadan",2024],"c-gintama":["Gintama",2006],"c-mha":["Boku no Hero Academia",2016],
+ "c-blackclover":["Black Clover",2017],"c-fireforce":["Enen no Shouboutai",2019],"c-fairytail":["Fairy Tail",2009],"c-shangrila":["Shangri-La Frontier",2023],"c-demonslayer":["Kimetsu no Yaiba",2019],
+ "c-eva":["Neon Genesis Evangelion",1995],"c-pluto":["Pluto",2023],"c-deathnote":["Death Note",2006],"c-bebop":["Cowboy Bebop",1998],"c-afro":["Afro Samurai",2007],
+ monster:["Monster",2004],parasyte:["Kiseijuu: Sei no Kakuritsu"],crybaby:["Devilman Crybaby"],pingpong:["Ping Pong the Animation"],slamdunk:["The First Slam Dunk"],kamuy:["Golden Kamuy",2018],
+ tengoku:["Tengoku Daimakyou"],dunmeshi:["Dungeon Meshi"],orb:["Chi. Chikyuu no Undou ni Tsuite"],lookback:["Look Back",2024],stranger:["Sword of the Stranger"],mugen:["Mugen no Juunin: Immortal"],
+ gitssac:["Ghost in the Shell: Stand Alone Complex"],ergo:["Ergo Proxy"],paprika:["Paprika",2006],perfectblue:["Perfect Blue"],actress:["Millennium Actress"],mononoke:["Mononoke",2007],mushishi:["Mushishi",2005],
+ ousama:["Ousama Ranking",2021],fumetsu:["Fumetsu no Anata e",2021],steins:["Steins;Gate",2011],fatezero:["Fate/Zero",2011],jojo:["JoJo no Kimyou na Bouken (TV)",2012],baccano:["Baccano!"],
+ pretender:["Great Pretender",2020],oddtaxi:["Odd Taxi"],sakamoto:["Sakamoto Days",2025],lazarus:["Lazarus",2025],dandy:["Space Dandy",2014],zankyou:["Zankyou no Terror"],akudama:["Akudama Drive"],
+ gurren:["Tengen Toppa Gurren Lagann"],promare:["Promare"],bluelock:["Blue Lock",2022],kazetsuyo:["Kaze ga Tsuyoku Fuiteiru"],megalobox:["Megalobox",2018],kekkai:["Kekkai Sensen",2015],
+ michiko:["Michiko to Hatchin"],takopi:["Takopi no Genzai"],hikaru:["Hikaru ga Shinda Natsu"],spyfam:["Spy x Family",2022],kaguya:["Kaguya-sama wa Kokurasetai",2019],planetes:["Planetes"],
+ ookami:["Ookami Kodomo no Ame to Yuki"],kiminona:["Kimi no Na wa."],violet:["Violet Evergarden",2018],erased:["Boku dake ga Inai Machi"],deathparade:["Death Parade"],blueperiod:["Blue Period",2021],
+ vivy:["Vivy: Fluorite Eye's Song"],vhd:["Vampire Hunter D: Bloodlust"],tatami:["Yojouhan Shinwa Taikei"],kaiba:["Kaiba",2008],mindgame:["Mind Game",2004],inuoh:["Inu-Oh"],
+ eizouken:["Eizouken ni wa Te wo Dasu na!"],redline:["Redline",2009],tekkon:["Tekkonkinkreet"],texhnolyze:["Texhnolyze"],gankutsuou:["Gankutsuou"],shinsekai:["Shinsekai Yori"],dennou:["Dennou Coil"],
+ casshern:["Casshern Sins"],bigo:["The Big O",1999],flcl:["FLCL",2000],kaiji:["Gyakkyou Burai Kaiji: Ultimate Survivor"],sakamichi:["Sakamichi no Apollon"],pompo:["Eiga Daisuki Pompo-san"]};
+const CV_KEY="vito-anime-covers-v1";let COV={};try{COV=JSON.parse(localStorage.getItem(CV_KEY)||"{}");}catch(e){}
+const saveCov=()=>{try{localStorage.setItem(CV_KEY,JSON.stringify(COV));}catch(e){}};
+let cvBusy=false;const cvWant=new Set();
+function wantCovers(ids){ids.forEach(id=>{if(!COV[id]&&byId[id])cvWant.add(id);});pumpCovers();}
+async function pumpCovers(){if(cvBusy||!cvWant.size)return;cvBusy=true;
+ try{while(cvWant.size){const batch=[...cvWant].slice(0,10);batch.forEach(id=>cvWant.delete(id));
+  const parts=batch.map((id,i)=>{const c=byId[id];const o=Q_OVERRIDE[id]||[c.title];const yr=o[1]?`, seasonYear: ${o[1]}`:"";
+   return `a${i}: Media(search: ${JSON.stringify(o[0])}, type: ANIME${yr}) { id siteUrl coverImage { extraLarge large color } }`;});
+  let data=null;
+  try{const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({query:`query { ${parts.join("\n")} }`})});
+   const j=await r.json();data=j.data||{};if(r.status===429){batch.forEach(id=>cvWant.add(id));await new Promise(s=>setTimeout(s,20000));continue;}}catch(e){data={};}
+  batch.forEach((id,i)=>{const m=data&&data["a"+i];COV[id]=m&&m.coverImage?{img:m.coverImage.extraLarge||m.coverImage.large,color:m.coverImage.color,url:m.siteUrl,alid:m.id}:{none:true,t:Date.now()};});
+  saveCov();applyCovers();await new Promise(s=>setTimeout(s,900));}}
+ finally{cvBusy=false;}}
+function applyCovers(root){(root||document).querySelectorAll("[data-cover]").forEach(el=>{const cv=COV[el.dataset.cover];if(!cv||!cv.img||el.classList.contains("has-cover"))return;
+  el.classList.add("has-cover");
+  if(el.classList.contains("poster")){const bg=document.createElement("div");bg.className="bg";bg.style.backgroundImage=`url("${cv.img}")`;
+   const im=new Image();im.className="pc";im.alt="";im.decoding="async";im.src=cv.img;im.onload=()=>el.classList.add("cover-in");el.prepend(bg);el.appendChild(im);}
+  else{const im=new Image();im.alt="";im.src=cv.img;im.className="swimg";el.appendChild(im);}});
+ document.querySelectorAll("a[data-anilist]").forEach(a=>{const cv=COV[a.dataset.anilist];if(cv&&cv.url)a.href=cv.url;});}
+
+// ---------- More shows from AniList, scored by the same engine ----------
+const AUTEURS=["Shinichirou Watanabe","Masaaki Yuasa","Satoshi Kon","Mamoru Oshii","Mamoru Hosoda","Makoto Shinkai","Hayao Miyazaki","Isao Takahata","Kunihiko Ikuhara","Hideaki Anno","Kenji Nakamura","Sayo Yamamoto","Takeshi Koike","Rie Matsumoto","Hiroyuki Imaishi","Naoko Yamada","Osamu Dezaki","Kouji Morimoto","Michael Arias","Kenji Kamiyama","Ryuutarou Nakamura","Yoshiaki Kawajiri","Shinji Aramaki","Tatsuki","Tetsurou Araki","Shingo Natsume","Hiroshi Hamasaki","Mitsuo Iso","Yoshitoshi ABe","Shuuhei Morita","Masaaki Yuasa"];
+const GOOD_STUDIOS=["MAPPA","ufotable","Bones","Production I.G","Madhouse","Science SARU","Wit Studio","Kyoto Animation","Trigger","Studio 4°C","CoMix Wave Films","Studio Ghibli","Sunrise","Shaft","CloverWorks","David Production","Studio Chizu","Orange","TMS Entertainment","Studio Durian","Kinema Citrus","Manglobe"];
+const EX_KEY="vito-anime-explore-v1";
+let EXP={at:0,items:[]};try{EXP=JSON.parse(localStorage.getItem(EX_KEY)||"null")||EXP;}catch(e){}
+const tagR=(m,names)=>Math.max(0,...m.tags.filter(t=>names.includes(t.name)).map(t=>t.rank||0));
+const clamp10=v=>Math.max(0,Math.min(10,Math.round(v)));
+function autoAxes(m){const g=new Set(m.genres||[]);const studios=(m.studios?.nodes||[]).map(s=>s.name);
+ const directors=(m.staff?.edges||[]).filter(e=>/Director/i.test(e.role||"")&&!/Assistant|Episode|Unit|Animation|Sound|Art|Action|CG/i.test(e.role||"")).map(e=>e.node?.name?.full||"");
+ const avg=m.averageScore||70;
+ const w=clamp10((avg-62)/3+(tagR(m,["Philosophy","Psychological","Tragedy","Politics","Coming of Age"])>70?1:0));
+ const a=clamp10(5+(studios.some(s=>GOOD_STUDIOS.includes(s))?2:0)+((m.startDate?.year||2000)>=2014?1:0)+(avg>=85?1:0));
+ const m_=clamp10(Math.max(tagR(m,["Seinen"])/10,tagR(m,["Primarily Adult Cast","Philosophy","Psychological","Gore","Tragedy","Noir","Crime"])/12,3)+(g.has("Psychological")?1:0));
+ const o=clamp10(4+tagR(m,["Avant Garde","Surreal Comedy","Episodic","Non-fiction","Experimental"])/25+(g.has("Mystery")?1:0)+(g.has("Supernatural")?.5:0)+(tagR(m,["Isekai","Harem"])>50?-2:0));
+ const x=clamp10((g.has("Action")?6:2)+tagR(m,["Martial Arts","Swordplay","Super Power","Battle Royale","Guns"])/40);
+ const h=clamp10((g.has("Comedy")?5:1)+tagR(m,["Parody","Satire","Surreal Comedy","Slapstick"])/30);
+ const d=clamp10(directors.some(n=>AUTEURS.includes(n))?9:5+(studios.some(s=>["Science SARU","Studio 4°C","Shaft","Trigger"].includes(s))?1:0));
+ const sp=g.has("Sports")?9:0;
+ const f=clamp10(Math.max(g.has("Ecchi")?8:0,tagR(m,["Fan Service","Nudity"])/10,tagR(m,["Harem","Reverse Harem"])>50?6:0,tagR(m,["Large Breasts","Bondage"])>50?6:0));
+ const s=clamp10(Math.max(g.has("Slice of Life")?6:3,tagR(m,["Iyashikei","Slow Paced"])>60?7:0));
+ const gen=clamp10(Math.max(2,tagR(m,["Isekai","Overpowered Main Character","Harem","Video Games","Reincarnation"])>55?7:0));
+ return {w,a,m:m_,o,x,h,d,sp,f,s,g:gen,directors};}
+const strip=t=>(t||"").replace(/<[^>]+>/g," ").replace(/\(Source:[^)]*\)/gi,"").replace(/\s+/g," ").trim();
+function shortDesc(t){t=strip(t);const s=t.split(/(?<=[.!?])\s+/);let o="";for(const x of s){if((o+" "+x).length>230)break;o=(o?o+" ":"")+x;}return o||t.slice(0,220);}
+function knownKeys(){const k=new Set();ALL.forEach(c=>{if(c.auto)return;k.add(norm(c.title));const o=Q_OVERRIDE[c.id];if(o)k.add(norm(o[0]));const cv=COV[c.id];if(cv&&cv.alid)k.add("id"+cv.alid);});return k;}
+const norm=s=>(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function toAuto(m){const ax=autoAxes(m);const col=m.coverImage?.color||"#5856d6";
+ const title=m.title.english||m.title.romaji;const st=(m.studios?.nodes||[]).map(s=>s.name)[0]||"";
+ const kind=m.format==="MOVIE"?"Movie":"Series";const eps=m.format==="MOVIE"?(m.duration?`${m.duration} min`:"Film"):(m.episodes?`${m.episodes} eps`:"Ongoing");
+ const id="al-"+m.id;
+ COV[id]={img:m.coverImage?.extraLarge||m.coverImage?.large,color:col,url:m.siteUrl,alid:m.id};
+ return {id,title,jp:m.title.native||title,year:m.startDate?.year||"",kind,eps,studio:st,c1:col,c2:mix(col,"#000000",.6).replace(/rgb\((\d+),(\d+),(\d+)\)/,(_,r,g,b)=>"#"+[r,g,b].map(v=>(+v).toString(16).padStart(2,"0")).join("")),
+  ax:{w:ax.w,a:ax.a,m:ax.m,o:ax.o,x:ax.x,h:ax.h,d:ax.d,sp:ax.sp,f:ax.f,s:ax.s,g:ax.g},desc:shortDesc(m.description),tip:"",second:false,cal:false,auto:true,score:m.averageScore,directors:ax.directors};}
+function addAuto(items){const k=knownKeys();let n=0;
+ for(const c of items){if(byId[c.id])continue;if(k.has(norm(c.title))||k.has("id"+c.id.slice(3)))continue;CAT.push(c);ALL.push(c);byId[c.id]=c;n++;}return n;}
+const EXQ=`query($p:Int){Page(page:$p,perPage:50){media(type:ANIME,sort:SCORE_DESC,isAdult:false,averageScore_greater:74,popularity_greater:15000,format_in:[TV,MOVIE,ONA,OVA,TV_SHORT]){id format episodes duration averageScore popularity siteUrl description(asHtml:false)
+ title{english romaji native} startDate{year} genres tags{name rank} studios(isMain:true){nodes{name}} staff(perPage:8,sort:RELEVANCE){edges{role node{name{full}}}}
+ relations{edges{relationType}} coverImage{extraLarge large color}}}}`;
+async function loadExplore(force){
+ if(!force&&EXP.items.length&&Date.now()-EXP.at<7*864e5){const n=addAuto(EXP.items);return n;}
+ const out=[];
+ for(let p=1;p<=5;p++){try{const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({query:EXQ,variables:{p}})});
+   if(!r.ok)break;const j=await r.json();const ms=j.data?.Page?.media||[];
+   ms.filter(m=>!(m.relations?.edges||[]).some(e=>e.relationType==="PREQUEL"||e.relationType==="PARENT")).forEach(m=>out.push(toAuto(m)));
+   await new Promise(s=>setTimeout(s,2500));}catch(e){break;}}
+ if(out.length){EXP={at:Date.now(),items:out};try{localStorage.setItem(EX_KEY,JSON.stringify(EXP));}catch(e){}saveCov();}
+ return addAuto(out);}
+// Message for Claude: the AI review loop
+function claudeBrief(){const lines=[];const vb=v=>VERD[v].n;
+ lines.push("Here is my latest Anime Deck export. Please review my ratings, update my taste profile, and curate a new batch of Claude's picks for curated.json.");
+ lines.push("");lines.push("My ratings:");
+ for(const[id,p] of Object.entries(S.picks)){const c=byId[id];if(!c)continue;const asp=ASPECTS.filter(a=>(p.aspects||{})[a.k]).map(a=>`${a.n} ${(a.k==="s"?PACEWORD:ASPWORD)[p.aspects[a.k]]}`).join(", ");
+  lines.push(`- ${c.title} (${c.year})${c.auto?" [AniList]":""}: ${vb(p.verdict)}${asp?`; ${asp}`:""}${p.dropped?"; dropped":""}`);}
+ lines.push("");lines.push("Current weights: "+AXES.map(a=>`${a.n} ${(+S.w[a.k]).toFixed(1)}`).join(", "));
+ lines.push("");lines.push("Data: "+JSON.stringify({v:1,picks:S.picks,adj:S.adj||{}}));
+ return lines.join("\n");}
+
+const SEED={"lazarus":{"verdict":"watch","aspects":{},"dropped":false},"mononokemovie":{"verdict":"watch","aspects":{},"dropped":false},"gitssac":{"verdict":"love","aspects":{"a":2,"c":2,"d":2,"s":1,"w":2,"x":1},"dropped":false},"pingpong":{"verdict":"love","aspects":{},"dropped":false},"vivy":{"verdict":"watch","aspects":{},"dropped":false},"trigunst":{"verdict":"watch","aspects":{},"dropped":false},"monster":{"verdict":"watch","aspects":{},"dropped":false},"reze":{"verdict":"love","aspects":{},"dropped":false},"gankutsuou":{"verdict":"love","aspects":{"a":2,"c":2,"d":2,"w":2},"dropped":false},"hikaru":{"verdict":"watch","aspects":{},"dropped":false},"gurren":{"verdict":"watch","aspects":{},"dropped":false},"ousama":{"verdict":"love","aspects":{"a":2,"c":2,"d":2,"w":2,"x":2},"dropped":false},"lookback":{"verdict":"watch","aspects":{}},"kaiba":{"verdict":"watch","aspects":{},"dropped":false},"champloo":{"verdict":"love","aspects":{},"dropped":false},"slamdunk":{"verdict":"love","aspects":{},"dropped":false},"eizouken":{"verdict":"watch","aspects":{},"dropped":false},"mindgame":{"verdict":"watch","aspects":{},"dropped":false},"paprika":{"verdict":"ok","aspects":{},"dropped":false},"perfectblue":{"verdict":"watch","aspects":{},"dropped":false},"frieren2":{"verdict":"love","aspects":{"a":2,"c":2,"d":2,"s":-1,"w":2,"x":2},"dropped":false},"kekkai":{"verdict":"watch","aspects":{},"dropped":false},"mononoke":{"verdict":"love","aspects":{},"dropped":false},"tengoku":{"verdict":"watch","aspects":{},"dropped":false},"inuoh":{"verdict":"watch","aspects":{},"dropped":false},"tekkon":{"verdict":"watch","aspects":{},"dropped":false},"gits95":{"verdict":"love","aspects":{},"dropped":false},"dunmeshi":{"verdict":"watch","aspects":{},"dropped":false},"jojo":{"verdict":"like","aspects":{},"dropped":false},"akudama":{"verdict":"like","aspects":{"a":2,"c":1,"d":2,"s":2,"w":1,"x":2},"dropped":false},"actress":{"verdict":"watch","aspects":{},"dropped":false},"stranger":{"verdict":"like","aspects":{"a":2,"c":2,"d":1,"s":2,"w":2,"x":2},"dropped":false},"dorohedoro":{"verdict":"like","aspects":{},"dropped":false},"psychopass":{"verdict":"watch","aspects":{},"dropped":false},"fatezero":{"verdict":"watch","aspects":{},"dropped":false},"redline":{"verdict":"watch","aspects":{},"dropped":false},"promare":{"verdict":"watch","aspects":{},"dropped":false},"zankyou":{"verdict":"watch","aspects":{},"dropped":false},"tybw":{"verdict":"love","aspects":{"a":2,"c":1,"d":2,"w":1},"dropped":false},"akira":{"verdict":"love","aspects":{},"dropped":false},"flcl":{"verdict":"watch","aspects":{},"dropped":false},"vhd":{"verdict":"pass","aspects":{},"dropped":false},"texhnolyze":{"verdict":"watch","aspects":{},"dropped":false},"casshern":{"verdict":"watch","aspects":{},"dropped":false},"kamuy":{"verdict":"watch","aspects":{},"dropped":false},"crybaby":{"verdict":"love","aspects":{},"dropped":false},"takopi":{"verdict":"watch","aspects":{},"dropped":false}};
+
+
+// Shows Vito said he loves, used as anchors before he rates anything.
+const KNOWN_LOVES=["c-berserk","c-vinland","c-jjk","c-csm","c-hxh","c-aot","c-fma","c-pluto","c-frieren","c-bebop","c-mob","c-afro","c-haikyu","c-dandadan","c-gintama","c-deathnote","c-onepiece","c-eva"];
+
+const RATING=[
+ {id:"hate",n:"Hated it",v:-1.3},{id:"dis",n:"Didn't like it",v:-.8},{id:"ok",n:"It was okay",v:-.15},
+ {id:"like",n:"Liked it",v:.5},{id:"love",n:"Loved it",v:1},{id:"fav",n:"All-time favorite",v:1.4}];
+const SHORT=["Hated","Disliked","Okay","Liked","Loved","Favorite"];
+const VERD=Object.fromEntries([...RATING.map((r,i)=>[r.id,{...r,short:SHORT[i],seen:true,i}]),["pass",{id:"pass",n:"Passed",short:"Passed",v:-.6,seen:false}],["watch",{id:"watch",n:"Watchlist",short:"Watchlist",v:.6,seen:false}]]);
+const ASPECTS=[{k:"w",n:"Story"},{k:"c",n:"Characters",ax:"w"},{k:"a",n:"Animation"},{k:"d",n:"Art style"},{k:"x",n:"Action"},{k:"s",n:"Pacing"}];
+const ASPWORD={"-2":"Weak","-1":"Below par","0":"No opinion","1":"Good","2":"Great"};
+const PACEWORD={"-2":"Too slow","-1":"A bit slow","0":"No opinion","1":"Good","2":"Perfect"};
+
+// ---------- State ----------
+const LS="vito-anime-deck-v4";
+let S={w:{...BASE},picks:{},hist:[],fsMax:6,films:true,second:true,learn:true,tab:"discover",filter:"fav"};
+function migrate(x){if(!x)return null;
+ if(x.verdict){if(VERD[x.verdict])return {verdict:x.verdict,aspects:x.aspects||levToAsp(x.levers),dropped:!!x.dropped};return null;}
+ if(x==="save")return {verdict:"watch",aspects:{}};if(x==="pass")return {verdict:"pass",aspects:{}};if(x==="seen")return {verdict:"ok",aspects:{}};
+ if(x.seen===true){const r=x.rating??2;return {verdict:["hate","dis","ok","like","love"][r]||"ok",aspects:tagsToAsp(x.tags),dropped:!!x.dropped};}
+ if(x.seen===false)return {verdict:x.interest>=2?"watch":"pass",aspects:{}};return null;}
+function levToAsp(l){const o={};for(const[k,v] of Object.entries(l||{}))if(v)o[k]=v>0?1:-1;return o;}
+function tagsToAsp(t){const m={story:["w",1],anim:["a",1],style:["d",1],fights:["x",1],slow:["s",-1],badanim:["a",-1]};const o={};(t||[]).forEach(id=>{if(m[id])o[m[id][0]]=m[id][1];});return o;}
+try{const s=JSON.parse(localStorage.getItem(LS)||"null");
+ if(s){S={...S,...s,w:{...BASE,...(s.w||{})}};}
+ else for(const k of ["vito-anime-deck-v3","vito-anime-deck-v2","vito-anime-deck-v1"]){const o=JSON.parse(localStorage.getItem(k)||"null");if(o&&o.picks){for(const[id,p] of Object.entries(o.picks)){const n=migrate(p);if(n&&byId[id])S.picks[id]=n;}if(o.w)S.w={...BASE,...o.w};break;}}
+}catch(e){}
+S.hist=S.hist||[];S.adj=S.adj||{};
+let FRESH=false;try{FRESH=!localStorage.getItem(LS);}catch(e){}
+if(FRESH&&!Object.keys(S.picks).length){S.picks={...SEED};try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+
+// ---------- Engine ----------
+const contrib=c=>AXES.map(a=>({k:a.k,v:S.w[a.k]*c.ax[a.k],x:c.ax[a.k]}));
+const rawScore=c=>contrib(c).reduce((t,o)=>t+o.v,0);
+function scores(){const r=ALL.map(rawScore);const lo=Math.min(...r),hi=Math.max(...r);const m={};ALL.forEach((c,i)=>m[c.id]=Math.round(40+59*((r[i]-lo)/((hi-lo)||1))));return m;}
+function anchors(){const loved=Object.entries(S.picks).filter(([,p])=>p.verdict==="love"||p.verdict==="fav").map(([id])=>id);
+ const disliked=new Set(Object.entries(S.picks).filter(([,p])=>["hate","dis","ok"].includes(p.verdict)).map(([id])=>id));
+ return [...new Set([...loved,...KNOWN_LOVES])].filter(id=>!disliked.has(id)&&byId[id]);}
+function closest(c){const vec=x=>AXES.filter(a=>a.k!=="sp"||c.ax.sp>5).map(a=>x.ax[a.k]-5);
+ const a=vec(c);let best=null,bs=-2;for(const id of anchors()){if(id===c.id)continue;const b=vec(byId[id]);let d=0,na=0,nb=0;a.forEach((v,i)=>{d+=v*b[i];na+=v*v;nb+=b[i]*b[i];});const s=d/Math.sqrt(na*nb||1);if(s>bs){bs=s;best=id;}}return best?byId[best]:null;}
+function whyText(c){const pos=contrib(c).filter(o=>S.w[o.k]>0&&o.x>=7).sort((a,b)=>b.v-a.v).slice(0,2).map(o=>AX[o.k].ph);
+ const top=AXES.filter(a=>S.w[a.k]>0).sort((a,b)=>S.w[b.k]-S.w[a.k]).slice(0,2).map(a=>a.k);
+ const topHit=contrib(c).filter(o=>top.includes(o.k)&&o.x>=8).length;
+ let t="";
+ if(pos.length===2)t=`It has ${pos[0]} and ${pos[1]}`;else if(pos.length===1)t=`It has ${pos[0]}`;else t="It is a different kind of show for you";
+ t+=topHit===2?", the two things you value most. ":topHit===1?", one of the things you value most. ":". ";
+ const near=closest(c);if(near){const p=S.picks[near.id];t+=`The closest match in your taste is ${near.title}${p&&p.verdict==="fav"?", one of your favorites":p&&p.verdict==="love"?", which you loved":""}. `;}
+ const warn=[];if(c.ax.f>=4)warn.push("some fan service");if(c.ax.s>=6)warn.push("a slow start");if(c.ax.g>=3)warn.push("a simpler story than you usually like");
+ if(warn.length)t+=`Be ready for ${warn.join(" and ")}.`;return t.trim();}
+function chartRows(c){const cs=contrib(c);const shown=cs.filter(o=>o.x>=6||(S.w[o.k]<0&&o.x>=3)).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)).slice(0,6);
+ const max=Math.max(...ALL.flatMap(x=>contrib(x).map(o=>Math.abs(o.v))),1);
+ return shown.map(o=>{const pct=Math.min(1,Math.abs(o.v)/max);const neg=o.v<0;
+  const style=neg?`right:66.7%;width:${pct*33.3}%`:`left:33.3%;width:${pct*66.7}%`;
+  return `<span class="n">${AX[o.k].n}</span><span class="track"><i class="${neg?"neg":""}" style="${style}"></i></span><span class="v">${o.x}/10</span>`;}).join("");}
+
+// Cards in Discover: new picks by score, with one "rate a show you know" card after every four.
+function pool(){return CAT.filter(c=>c.ax.f<=S.fsMax&&(S.films||c.kind!=="Movie")&&(S.second||!c.second));}
+let front=null;const skipped=new Set();
+function queue(){const m=scores();const a=pool().filter(c=>!S.picks[c.id]).sort((x,y)=>m[y.id]-m[x.id]);const b=CAL.filter(c=>!S.picks[c.id]);
+ let q=[];let i=0,j=0;while(i<a.length||j<b.length){for(let k=0;k<4&&i<a.length;k++)q.push(a[i++]);if(j<b.length)q.push(b[j++]);}
+ const sk=S.skipped||[];q.sort((x,y)=>(sk.indexOf(x.id)+1?1+sk.indexOf(x.id):0)-(sk.indexOf(y.id)+1?1+sk.indexOf(y.id):0));
+ if(front){const f=q.findIndex(c=>c.id===front);if(f>0)q.unshift(q.splice(f,1)[0]);front=null;}return q;}
+
+let DER={...BASE};
+function rebuild(){S.w={...BASE};for(const[id,p] of Object.entries(S.picks)){const c=byId[id];if(c&&VERD[p.verdict])learn(c,p);}DER={...S.w};for(const a of AXES)S.w[a.k]=Math.max(-4,Math.min(4,+(DER[a.k]+(S.adj[a.k]||0)).toFixed(3)));}
+function learn(c,p,dir=1){if(!S.learn)return;const lr=.06,sig=VERD[p.verdict].v;
+ for(const a of AXES)S.w[a.k]+=dir*lr*sig*(c.ax[a.k]-5)/5;
+ for(const[k,v] of Object.entries(p.aspects||{})){if(!v)continue;const ax=k==="c"?"w":k;
+  if(ax==="s")S.w.s+=dir*(v<0?.05*v:.015*v); else S.w[ax]+=dir*.035*Math.abs(v)*(v>0?1:.7);}
+ if(p.dropped)S.w.s-=dir*.05;
+ for(const a of AXES)S.w[a.k]=Math.max(-4,Math.min(4,+S.w[a.k].toFixed(3)));}
+
+// ---------- DB ----------
+let db=null;
+(async()=>{try{db=await window.claude?.use?.("db");}catch(e){db=null;}if(!db)return;
+ try{const snap=await db.collection("picks").get();
+  if(!snap.empty){const p={};snap.docs.forEach(d=>{const n=migrate(d.data());if(n&&byId[d.id])p[d.id]=n;});if(Object.keys(p).length)S.picks=p;}
+  const ws=await db.doc("engine/weights").get();if(ws.exists){const d=ws.data();if(d&&d.w)S.w={...BASE,...d.w};}
+  saveLocal();render(false);}catch(e){}})();
+function pushPick(id){if(!db)return;const p=S.picks[id],c=byId[id];
+ if(!p){db.doc("picks/"+id).delete().catch(()=>{});return;}
+ const words={};for(const a of ASPECTS){const v=(p.aspects||{})[a.k];if(v)words[a.n]=(a.k==="s"?PACEWORD:ASPWORD)[v];}
+ db.doc("picks/"+id).set({title:c.title,verdict:p.verdict,verdictLabel:VERD[p.verdict].n,seen:VERD[p.verdict].seen,aspects:p.aspects||{},aspectLabels:words,dropped:!!p.dropped,calibration:c.cal,at:Date.now()}).catch(()=>{});}
+let wt;function pushW(){if(!db)return;clearTimeout(wt);wt=setTimeout(()=>db.doc("engine/weights").set({w:S.w,at:Date.now()}).catch(()=>{}),700);}
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const coverURL=c=>"https://anilist.co/search/anime?search="+encodeURIComponent(c.title.replace(/[:!]/g," ").replace(/\s+/g," ").trim());
+const I={
+ x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+ plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+ eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ img:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>',
+ chev:'<svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>'};
+const stage=$("stage");let cur=null,F=null;
+
+function setTabs(){const t=$("tabs");t.querySelector(".th").style.transform=`translateX(${["discover","watch","favs"].indexOf(S.tab)*100}%)`;
+ t.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===S.tab));
+ $("stage").hidden=S.tab!=="discover";$("favs").hidden=S.tab==="discover";$("bUndo").disabled=!S.hist.length;}
+function render(anim){setTabs();if(S.tab!=="discover"){renderFavs();return;}
+ const q=queue();if(!q.length){stage.innerHTML=`<div class="done"><div class="empty"><b>You rated the whole deck</b>Open the taste engine and tap Ask Claude for new picks, or load more shows from AniList.</div></div>`;return;}
+ const c=cur=q[0];const m=scores()[c.id];
+ F={rating:null,aspects:{},dropped:false};
+ const meta=`${c.auto?"AniList pick. ":c.cal?"":"Claude's pick. "}${c.second?"Second chance. ":""}${c.year} ${c.kind.toLowerCase()}, ${c.eps}, ${c.studio}`;
+ stage.innerHTML=`<div class="flip${anim?" enter":""}" id="flip">
+ <article class="face front" style="--c1:${c.c1};--c2:${c.c2}">
+  <div class="scroll">
+   <div class="poster" data-cover="${c.id}"><canvas class="art" data-paint="${c.id}" aria-hidden="true"></canvas><div class="kanji" aria-hidden="true">${esc(c.jp)}</div>
+    <div class="ptop"><span class="match"><b>${m}%</b><span>${c.cal?"predicted":"match"}</span></span>
+     <a class="cover" data-anilist="${c.id}" href="${coverURL(c)}" target="_blank" rel="noopener">${I.img}Cover</a></div>
+    <div class="pt"><div class="meta">${esc(meta)}</div><h2>${esc(c.title)}</h2></div></div>
+   <div class="fb">
+    ${c.cal?`<p class="desc">You told me about this one. Rating it teaches the engine what you value, and makes every other match more accurate.</p>`:`<p class="desc">${esc(c.desc)}</p>`}
+    <div class="fit"><h3>${c.cal?"What the engine expects":c.auto?"Why it might fit":"Why you'd like it"}</h3>
+     <p>${esc(whyText(c))}</p>
+     <div class="chart" role="img" aria-label="How each part of the show adds to or takes away from your match">${chartRows(c)}</div>
+     <div class="legend"><span>Hurts</span><span>Helps your match</span></div>
+     ${c.tip?`<div class="tip"><b>How to watch it.</b> ${esc(c.tip)}</div>`:""}${c.auto?`<div class="tip">Scored automatically from AniList (${c.score}/100). Add it to your watchlist and Claude can take a closer look.</div>`:""}
+    </div>
+   </div></div>
+  <div class="actions${c.cal?" cal":""}">
+   ${c.cal?`<button class="btn quiet" id="bSkip">Skip</button><button class="btn primary" id="bSeen">${I.eye}Rate it</button>`:
+   `<button class="btn quiet" id="bSkip">Not sure</button><button class="btn quiet" id="bPass">${I.x}Pass</button><button class="btn primary" id="bWatch">${I.plus}Watchlist</button><button class="btn outline" id="bSeen">${I.eye}Seen it</button>`}
+  </div>
+ </article>
+ <article class="face back" style="--c1:${c.c1};--c2:${c.c2}" aria-hidden="true">
+  <div class="bh"><div class="sw" data-cover="${c.id}"><canvas data-paint="${c.id}"></canvas></div><div class="t"><b>${esc(c.title)}</b><span>Tell me what you thought</span></div><button class="link" id="bCancel">Cancel</button></div>
+  <div class="scroll"><div class="bb">
+   <div><div class="qh"><h3>How was it?</h3><span class="hint">Drag or tap a word</span></div>
+    <div class="big unset" id="rLabel">Not rated yet</div>
+    <input class="rng unset" type="range" id="rRange" min="0" max="5" step="1" value="3" aria-label="Your rating, from hated it to all-time favorite">
+    <div class="scale" id="rScale">${SHORT.map((s,i)=>`<button data-i="${i}">${s}</button>`).join("")}</div></div>
+   <div><div class="qh" style="margin-bottom:8px"><h3>What stood out?</h3><span class="hint">Optional</span></div>
+    <div class="aspects">${ASPECTS.map(a=>`<div class="asp"><label for="a-${a.k}">${a.n}</label><input class="rng" type="range" id="a-${a.k}" data-k="${a.k}" min="-2" max="2" step="1" value="0"><output id="o-${a.k}">No opinion</output></div>`).join("")}</div></div>
+   <label class="row2" for="dropped">I stopped before the end<span class="switch"><input type="checkbox" id="dropped"><span></span></span></label>
+  </div></div>
+  <div class="backact"><button class="btn primary" id="bSave" disabled>Save rating</button></div>
+ </article></div>`;
+ paintAll(stage);applyCovers(stage);wantCovers(q.slice(0,8).map(x=>x.id));
+ const flip=$("flip");if(anim)requestAnimationFrame(()=>requestAnimationFrame(()=>flip.classList.remove("enter")));
+ const front=flip.querySelector(".front"),back=flip.querySelector(".back");
+ const flipTo=b=>{flip.classList.toggle("flipped",b);front.setAttribute("aria-hidden",b);back.setAttribute("aria-hidden",!b);front.inert=b;back.inert=!b;};
+ back.inert=true;
+ $("bSeen").onclick=()=>flipTo(true);$("bCancel").onclick=()=>flipTo(false);
+ if($("bPass"))$("bPass").onclick=()=>commit("pass");
+ if($("bWatch"))$("bWatch").onclick=()=>commit("watch");
+ if($("bSkip"))$("bSkip").onclick=()=>{S.skipped=[...new Set([...(S.skipped||[]).filter(x=>x!==c.id),c.id])];saveLocal();toast("Saved for later. It comes back at the end.");leave("l");};
+ const rr=$("rRange"),rl=$("rLabel");
+ const paintR=()=>{const i=+rr.value;F.rating=i;rr.classList.remove("unset");rr.style.setProperty("--p",(i/5*100)+"%");
+  rl.textContent=RATING[i].n;rl.classList.remove("unset");$("rScale").querySelectorAll("button").forEach(b=>b.classList.toggle("on",+b.dataset.i===i));
+  $("bSave").disabled=false;$("bSave").textContent=`Save: ${RATING[i].n.toLowerCase()}`;};
+ rr.addEventListener("input",paintR);rr.addEventListener("change",paintR);
+ rr.addEventListener("pointerdown",()=>{if(F.rating===null)setTimeout(paintR,0);});
+ $("rScale").querySelectorAll("button").forEach(b=>b.onclick=()=>{rr.value=b.dataset.i;paintR();});
+ back.querySelectorAll(".asp .rng").forEach(r=>{const paint=()=>{const v=+r.value,k=r.dataset.k;
+   const a=v<0?50+v*25:50,b=v>0?50+v*25:50;r.style.setProperty("--a",a+"%");r.style.setProperty("--b",b+"%");r.classList.toggle("neg",v<0);
+   $("o-"+k).textContent=(k==="s"?PACEWORD:ASPWORD)[v];if(v)F.aspects[k]=v;else delete F.aspects[k];};r.oninput=paint;paint();});
+ $("dropped").onchange=e=>F.dropped=e.target.checked;
+ $("bSave").onclick=()=>{if(F.rating===null)return;commit(RATING[F.rating].id,F.aspects,F.dropped);};}
+function leave(dir){const f=$("flip");if(f){f.classList.remove("flipped");f.classList.add(dir==="l"?"leave-l":"leave-r");}setTimeout(()=>render(true),260);}
+function commit(verdict,aspects={},dropped=false){const c=cur;const p={verdict,aspects:{...aspects},dropped:!!dropped};
+ S.hist.push({id:c.id,w:{...S.w},prev:S.picks[c.id]||null});if(S.hist.length>60)S.hist.shift();
+ S.picks[c.id]=p;rebuild();saveLocal();pushPick(c.id);pushW();
+ toast(verdict==="watch"?"Added to watchlist":verdict==="pass"?"Passed":verdict==="fav"?"Added to favorites":`Saved: ${VERD[verdict].n.toLowerCase()}`);
+ leave(["pass","hate","dis"].includes(verdict)?"l":"r");}
+function undo(){const h=S.hist.pop();if(!h)return;if(h.prev)S.picks[h.id]=h.prev;else delete S.picks[h.id];rebuild();saveLocal();pushPick(h.id);pushW();
+ front=h.id;S.tab="discover";toast("Undone");render(true);}
+
+// ---------- Favorites tab ----------
+const FILTERS=[{id:"fav",n:"Favorites"},{id:"love",n:"Loved"},{id:"all",n:"All rated"}];
+function inFilter(p,f){if(f==="all")return VERD[p.verdict].seen;return p.verdict===f;}
+function renderFavs(){const el=$("favs");const m=scores();const W=S.tab==="watch";if(!W&&S.filter==="watch")S.filter="fav";const F0=W?"watch":S.filter;
+ const counts=Object.fromEntries(FILTERS.map(f=>[f.id,Object.values(S.picks).filter(p=>inFilter(p,f.id)).length]));
+ const fi=FILTERS.findIndex(f=>f.id===S.filter);
+ let items=Object.entries(S.picks).filter(([id,p])=>byId[id]&&inFilter(p,F0)).map(([id,p])=>({c:byId[id],p}));
+ items.sort((a,b)=>F0==="watch"?m[b.c.id]-m[a.c.id]:(VERD[b.p.verdict].i??0)-(VERD[a.p.verdict].i??0)||a.c.title.localeCompare(b.c.title));
+ const empty={fav:["No favorites yet","Rate a show you've seen as an all-time favorite and it appears here."],love:["Nothing loved yet","Shows you rate Loved it appear here."],watch:["Your watchlist is empty","Tap Watchlist on any card in Discover."],all:["Nothing rated yet","Tap Seen it on a card to rate a show."]}[F0];
+ el.innerHTML=(W?`<div class="foot" style="padding:2px 4px 0">${items.length} to watch, best match first.</div>`:`<div class="seg three" id="filt" role="tablist" aria-label="Filter"><div class="th" style="transform:translateX(${fi*100}%)"></div>${FILTERS.map(f=>`<button role="tab" aria-selected="${f.id===S.filter}" data-f="${f.id}">${f.n}${counts[f.id]?` ${counts[f.id]}`:""}</button>`).join("")}</div>`)+
+ (items.length?`<div class="grp">${items.map(({c,p})=>itemHTML(c,p,m[c.id])).join("")}</div>${W?`<div class="grp"><button class="linkbtn" id="copyW">Copy watchlist</button></div>`:""}`
+  :`<div class="grp"><div class="empty"><b>${empty[0]}</b>${empty[1]}</div></div>`);
+ paintAll(el);applyCovers(el);wantCovers(items.map(x=>x.c.id));
+ el.querySelectorAll("#filt button").forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;saveLocal();renderFavs();});
+ el.querySelectorAll(".ir").forEach(b=>b.onclick=()=>{const it=b.closest(".item");const open=!it.classList.contains("open");it.classList.toggle("open",open);b.setAttribute("aria-expanded",open);});
+ el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{const id=b.dataset.rm;S.hist.push({id,w:{...S.w},prev:S.picks[id]});delete S.picks[id];rebuild();saveLocal();pushPick(id);pushW();toast("Moved back to Discover");renderFavs();});
+ const cw=$("copyW");if(cw)cw.onclick=async()=>{const t=items.map(({c})=>`${c.title} (${c.year})`).join("\n");try{await navigator.clipboard.writeText(t);toast("Watchlist copied");}catch(e){toast("Copy is blocked here");}};
+ setTabs();}
+function itemHTML(c,p,m){const v=VERD[p.verdict];
+ const asp=ASPECTS.filter(a=>(p.aspects||{})[a.k]).map(a=>{const x=p.aspects[a.k];return `${a.n.toLowerCase()} ${(a.k==="s"?PACEWORD:ASPWORD)[x].toLowerCase()}`;});
+ let mine;
+ if(v.seen){mine=asp.length?`You said: ${asp.join(", ")}${p.dropped?", and you stopped before the end":""}.`:`${{hate:"You hated it",dis:"You didn't like it",ok:"You thought it was okay",like:"You liked it",love:"You loved it",fav:"One of your all-time favorites"}[p.verdict]}${p.dropped?", and you stopped before the end":""}. Rate the details next time with the sliders on the back of the card.`;}
+ else mine=whyText(c);
+ return `<div class="item"><button class="ir" aria-expanded="false" style="--c1:${c.c1};--c2:${c.c2}"><span class="sw" data-cover="${c.id}"><canvas data-paint="${c.id}"></canvas></span><span class="t"><b>${esc(c.title)}</b><span>${c.year} ${esc(c.kind.toLowerCase())}${v.seen?"":`, ${m}% match`}</span></span>${p.verdict==="watch"?"":`<span class="r${p.verdict==="fav"?" fav":""}">${v.short}</span>`}${I.chev}</button>
+ <div class="ex"><div><div class="exin"><p>${esc(mine)}</p>${c.desc?`<p class="soft">${esc(c.desc)}</p>`:""}
+ <div class="exact"><a class="exact-l" href="${coverURL(c)}" target="_blank" rel="noopener" style="color:var(--tint);font-size:14px;font-weight:500">See cover</a><button class="del" data-rm="${c.id}">Remove</button></div></div></div></div></div>`;}
+
+// ---------- Engine sheet ----------
+document.querySelectorAll(".sheet").forEach(s=>s.addEventListener("click",e=>{if(e.target===s||e.target.closest("[data-close]")){s.hidden=true;render(false);}}));
+$("bEngine").onclick=()=>{buildEngine();$("engSheet").hidden=false;};
+function pct(v,lo,hi){return ((v-lo)/(hi-lo)*100)+"%";}
+function buildEngine(){const el=$("engBody");
+ const wc=a=>`<div class="cell wcell"><label for="w-${a.k}">${a.n}<div class="sub">${a.d}</div></label><output id="wo-${a.k}">${(+S.w[a.k]).toFixed(1)}</output><input class="rng" type="range" id="w-${a.k}" min="-4" max="4" step="0.1" value="${S.w[a.k]}" style="--p:${pct(S.w[a.k],-4,4)}"></div>`;
+ const tg=(id,n,k)=>`<label class="cell" for="${id}" style="justify-content:space-between"><span>${n}</span><span class="switch"><input type="checkbox" id="${id}" ${S[k]?"checked":""}><span></span></span></label>`;
+ el.innerHTML=`<div class="foot" style="padding-top:2px">Every show is scored 0 to 10 on these axes. Your weights decide the match. Each answer moves them: a favorite moves them most, "okay" barely at all, and each aspect slider pushes its own axis.</div>
+ <div class="cap">What you value</div><div class="grp">${AXES.filter(a=>BASE[a.k]>0).map(wc).join("")}</div>
+ <div class="cap">What you avoid</div><div class="grp">${AXES.filter(a=>BASE[a.k]<0).map(wc).join("")}</div>
+ <div class="cap">Filters</div><div class="grp">
+  <div class="cell wcell"><label for="fsMax">Highest fan service allowed</label><output id="fsOut">${S.fsMax}</output><input class="rng" type="range" id="fsMax" min="0" max="10" step="1" value="${S.fsMax}" style="--p:${pct(S.fsMax,0,10)}"></div>
+  ${tg("tFilms","Include movies","films")}${tg("tSecond","Second-chance cards","second")}${tg("tLearn","Learn from my answers","learn")}</div>
+ <div class="grp" style="margin-top:12px"><button class="linkbtn" id="resetW">Clear my manual changes</button></div>
+ <div class="cap">More shows</div><div class="grp"><button class="linkbtn" id="moreAL">Find more shows on AniList</button><button class="linkbtn" id="askC">Ask Claude for new picks</button></div>
+ <div class="foot">"Ask Claude" copies your ratings as a message. Paste it into your Anime chat with Claude, and new Claude picks appear here the next time you open the app.</div>
+ <div class="foot">Your answers are saved on this iPad. Shows marked AniList are scored automatically from AniList tags, studios and directors. Claude's picks are written and scored by Claude.</div>`;
+ $("moreAL").onclick=async()=>{toast("Loading from AniList…");const n=await loadExplore(true);rebuild();toast(n?`${n} new shows added`:"No new shows found");};
+ $("askC").onclick=async()=>{const t=claudeBrief();try{await navigator.clipboard.writeText(t);toast("Copied. Paste it to Claude.");}catch(e){prompt("Copy this and send it to Claude",t);}};
+ AXES.forEach(a=>{const i=$("w-"+a.k);i.oninput=()=>{S.adj[a.k]=+(+i.value-DER[a.k]).toFixed(3);S.w[a.k]=+i.value;i.style.setProperty("--p",pct(+i.value,-4,4));$("wo-"+a.k).textContent=(+i.value).toFixed(1);saveLocal();pushW();};});
+ const fs=$("fsMax");fs.oninput=()=>{S.fsMax=+fs.value;fs.style.setProperty("--p",pct(+fs.value,0,10));$("fsOut").textContent=fs.value;saveLocal();};
+ [["tFilms","films"],["tSecond","second"],["tLearn","learn"]].forEach(([id,k])=>{$(id).onchange=e=>{S[k]=e.target.checked;if(k==="learn")rebuild();saveLocal();};});
+ $("resetW").onclick=()=>{S.adj={};rebuild();saveLocal();buildEngine();toast("Manual changes cleared");};}
+
+$("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(S.tab===b.dataset.t)return;S.tab=b.dataset.t;saveLocal();render(true);});
+$("bUndo").onclick=undo;
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),1500);}
+render(false);
+(async()=>{try{const r=await fetch("curated.json",{cache:"no-store"});if(r.ok){const j=await r.json();let n=0;(j.shows||[]).forEach(row=>{if(byId[row[0]])return;const c=toCard(row,false);CAT.push(c);ALL.push(c);byId[c.id]=c;if(row[13])MOTIF[c.id]=row[13];n++;});if(j.overrides)Object.assign(Q_OVERRIDE,j.overrides);if(n){rebuild();if(S.tab==="discover")render(false);}}}catch(e){}
+ try{const n=await loadExplore(false);if(n){rebuild();if(S.tab==="discover"&&!$("flip")?.classList.contains("flipped"))render(false);}}catch(e){}})();
+rebuild();
+let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>paintAll(),150);});
+})();
+</script>
+
+</body></html>
