@@ -79,8 +79,8 @@ button:disabled{cursor:default}
 .poster.has-cover .pt{right:calc(30px + (100% - 62px)*.667)}
 .sw{position:relative}.sw .swimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .art{position:absolute;inset:0;width:100%;height:100%;z-index:-2;display:block}
-.kanji{position:absolute;right:3%;top:-6%;bottom:-6%;writing-mode:vertical-rl;font-family:var(--mark);font-weight:800;font-size:clamp(88px,26vw,132px);line-height:.9;color:#fff;opacity:.13;white-space:nowrap;pointer-events:none;letter-spacing:-.03em}
-.pt{position:absolute;left:20px;right:20px;bottom:18px;color:#fff}
+.kanji{position:absolute;right:3%;top:-6%;bottom:-6%;writing-mode:vertical-rl;font-family:var(--mark);font-weight:800;font-size:clamp(88px,26vw,132px);line-height:.9;color:#fff;opacity:.09;white-space:nowrap;pointer-events:none;letter-spacing:-.03em}
+.pt{position:absolute;left:22px;right:22px;bottom:20px;color:#fff}
 .pt .meta{font-size:13px;font-weight:500;color:rgba(255,255,255,.82)}
 .pt h2{margin:4px 0 0;font-family:var(--disp);font-weight:700;font-size:clamp(26px,7.2vw,32px);line-height:1.04;letter-spacing:-.026em;text-wrap:balance}
 .ptop{position:absolute;left:16px;right:16px;top:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -90,31 +90,36 @@ button:disabled{cursor:default}
 .cover{display:flex;align-items:center;gap:5px;color:#fff;background:rgba(0,0,0,.28);padding:6px 11px;border-radius:999px;font-size:12.5px;font-weight:600}
 .cover svg{width:13px;height:13px}
 
-.fb{padding:16px 20px 18px;display:flex;flex-direction:column;gap:16px}
-.desc{margin:0;font-size:15.5px;line-height:1.5;max-width:62ch}
-.fit{display:flex;flex-direction:column;gap:12px;background:var(--fill2);border-radius:16px;padding:14px 14px 16px}
-.fit h3{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
-.fit p{margin:0;font-size:14.5px;line-height:1.48;color:var(--text)}
-.chart{display:grid;grid-template-columns:6.6em 1fr 2.4em;gap:9px 10px;align-items:center;font-size:12.5px}
-.chart .n{color:var(--mute)}
+.fb{padding:22px 22px 26px;display:flex;flex-direction:column;gap:20px}
+.desc{margin:0;font-size:17px;line-height:1.5;max-width:62ch;letter-spacing:-.005em}
+.fit{display:flex;flex-direction:column;gap:10px;border-top:.5px solid var(--line);padding-top:22px}
+.fit h4{margin:14px 0 2px;font-size:13px;font-weight:600;color:var(--mute)}
+.src{margin:-10px 0 0;font-size:13px;color:var(--mute)}
+.fit h3{margin:0;font-size:17px;font-weight:600;letter-spacing:-.015em}
+.fit p{margin:0;font-size:15.5px;line-height:1.5;color:var(--text);max-width:62ch}
+.chart{display:grid;grid-template-columns:7.2em 1fr 2.8em;gap:12px 12px;align-items:center;font-size:14px}
+.chart .n{color:var(--text)}
 .chart .v{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
-.track{position:relative;height:8px}
-.track::before{content:"";position:absolute;left:33.3%;top:-3px;bottom:-3px;width:1px;background:var(--line)}
+.track{position:relative;height:6px;background:var(--fill);border-radius:3px}
+.track::before{content:"";position:absolute;left:33.3%;top:-4px;bottom:-4px;width:1.5px;border-radius:1px;background:var(--faint)}
 .track i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--tint)}
 .track i.neg{background:var(--faint)}
 .legend{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mute);padding-left:calc(6.6em + 10px);padding-right:calc(2.4em + 10px)}
-.tip{font-size:14px;line-height:1.45;color:var(--text);border-top:.5px solid var(--line);padding-top:12px}
+.tip{font-size:15px;line-height:1.5;color:var(--text);background:var(--tintSoft);border-radius:14px;padding:12px 14px;margin-top:10px}
 .tip b{font-weight:600}
 
-.actions{flex:none;display:grid;grid-template-columns:.95fr .8fr 1.25fr 1fr;gap:8px;padding:10px 12px 12px;border-top:.5px solid var(--line);background:var(--card)}
-.actions.cal{grid-template-columns:1fr 2fr}
+.actions{flex:none;display:flex;flex-direction:column;gap:4px;padding:6px 14px 14px;border-top:.5px solid var(--line);background:var(--card)}
+.minor{display:flex;justify-content:space-between;gap:12px}
+.minor button{min-height:40px;padding:0 6px;font-size:14px;font-weight:500;color:var(--mute)}
+.major{display:grid;grid-template-columns:1.35fr 1fr;gap:10px}
+.major.one{grid-template-columns:1fr}.major.two{grid-template-columns:1fr 1.6fr;margin-top:8px}
 .btn{height:50px;border-radius:14px;font-size:15.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--fill);transition:transform .1s,opacity .2s}
 .btn svg{width:17px;height:17px}
 .btn:active:not(:disabled){transform:scale(.97)}
 .btn.primary{background:var(--tint);color:var(--onTint)}
 .btn.quiet{color:var(--mute)}
-.actions .btn{font-size:14.5px;gap:5px;padding:0 4px}
-.actions .btn svg{width:15px;height:15px}
+.actions .btn{font-size:16px;gap:7px;padding:0 10px;height:52px}
+.actions .btn svg{width:17px;height:17px}
 .btn.outline{color:var(--tint)}
 .btn:disabled{opacity:.35}
 
@@ -170,7 +175,7 @@ button:disabled{cursor:default}
 .sw{flex:none;border-radius:8px;background:radial-gradient(90% 80% at 80% 15%,var(--c1),var(--c2));display:grid;place-items:center;color:rgba(255,255,255,.88);font-family:var(--mark);font-weight:800;font-size:15px;writing-mode:vertical-rl;overflow:hidden;line-height:1}
 
 /* Favorites */
-.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-bottom:12px}
 .grp{background:var(--card);border-radius:14px;overflow:hidden}
 .item+.item{border-top:.5px solid var(--line)}
 .ir{width:100%;display:flex;align-items:center;gap:12px;padding:9px 14px;text-align:left;min-height:62px;box-sizing:border-box}
@@ -199,7 +204,7 @@ button:disabled{cursor:default}
 .hero .hwhy{padding:14px 18px 16px;display:flex;flex-direction:column;gap:8px}
 .hero .hwhy p{margin:0;font-size:15.5px;line-height:1.48}
 .more{font-size:14px;color:var(--tint);font-weight:600}
-.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px 12px;flex:none}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 14px;flex:none;padding-top:8px}
 .wt{position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;min-width:0}
 .wimg{position:relative;aspect-ratio:2/3;border-radius:16px;overflow:hidden;background:var(--c2);box-shadow:0 8px 22px -8px rgba(0,0,0,.35)}
 .wimg canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -208,7 +213,7 @@ button:disabled{cursor:default}
 .wm{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.45);color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .wtt{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 2px}
 .wtt b{font-size:14.5px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.wtt span{font-size:12.5px;color:var(--mute);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.wtt span{font-size:13px;color:var(--mute);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sheet.det .sheetin{max-height:94%;height:94%;max-width:640px}
 .detbody{position:relative;flex:1;min-height:0;perspective:1800px;margin:0 max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
 .empty{display:grid;place-items:center;text-align:center;padding:40px 24px;color:var(--mute);line-height:1.5}
@@ -235,7 +240,7 @@ button:disabled{cursor:default}
 .wcell .sub{font-size:12px;color:var(--mute)}
 .linkbtn{color:var(--tint);font-size:15px;padding:12px 16px;text-align:left;width:100%}
 
-.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:30;opacity:0;transition:opacity .22s,transform .22s;white-space:nowrap;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:30;opacity:0;transition:opacity .22s,transform .22s;white-space:nowrap;pointer-events:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){.flip{transition:opacity .2s}.flip.flipped{transform:none}.flip.flipped .front{opacity:0;pointer-events:none}.face.back{transform:none;opacity:0;pointer-events:none}.flip.flipped .face.back{opacity:1;pointer-events:auto}*{animation:none!important}}
 @media (max-height:700px){.poster{height:160px}.fb{gap:14px}}
@@ -669,7 +674,7 @@ function render(anim,opt){if(!opt){DET=null;setTabs();if(S.tab!=="discover"){ren
  const q=opt?[opt.c]:queue();if(!q.length){stage.innerHTML=`<div class="done"><div class="empty"><b>You rated the whole deck</b>Open the taste engine and tap Ask Claude for new picks, or load more shows from AniList.</div></div>`;return;}
  const c=cur=q[0];const m=scores()[c.id];
  F={rating:null,aspects:{},dropped:false};
- const meta=`${c.auto?"AniList pick. ":c.cal?"":"Claude's pick. "}${c.second?"Second chance. ":""}${c.year} ${c.kind.toLowerCase()}, ${c.eps}, ${c.studio}`;
+ const meta=`${c.second?"Second chance. ":""}${c.year}, ${c.kind.toLowerCase()}, ${c.eps}`;
  host.innerHTML=`<div class="flip${anim?" enter":""}" id="flip">
  <article class="face front" style="--c1:${c.c1};--c2:${c.c2}">
   <div class="scroll">
@@ -679,16 +684,18 @@ function render(anim,opt){if(!opt){DET=null;setTabs();if(S.tab!=="discover"){ren
     <div class="pt"><div class="meta">${esc(meta)}</div><h2>${esc(c.title)}</h2></div></div>
    <div class="fb">
     ${c.cal?`<p class="desc">You told me about this one. Rating it teaches the engine what you value, and makes every other match more accurate.</p>`:`<p class="desc">${esc(c.desc)}</p>`}
+    <p class="src">${esc(c.studio)}${c.studio?". ":""}${c.auto?`Found on AniList, rated ${c.score} out of 100.`:c.cal?"":"Picked and scored by Claude."}</p>
     <div class="fit"><h3>${c.cal?"What the engine expects":c.auto?"Why it might fit":"Why you'd like it"}</h3>
      <p>${esc(whyText(c))}</p>
-     <div class="chart" role="img" aria-label="How each part of the show adds to or takes away from your match">${chartRows(c)}</div>
-     <div class="legend"><span>Hurts</span><span>Helps your match</span></div>
-     ${c.tip?`<div class="tip"><b>How to watch it.</b> ${esc(c.tip)}</div>`:""}${c.auto?`<div class="tip">Scored automatically from AniList (${c.score}/100). Add it to your watchlist and Claude can take a closer look.</div>`:""}
+     <h4>What drives your match</h4><div class="chart" role="img" aria-label="How each part of the show adds to or takes away from your match">${chartRows(c)}</div>
+     
+     ${c.tip?`<div class="tip"><b>How to watch it.</b> ${esc(c.tip)}</div>`:""}
     </div>
    </div></div>
-  <div class="actions${c.cal||opt?" cal":""}">
-   ${opt?`<button class="btn quiet" id="bRemove">Remove</button><button class="btn primary" id="bSeen">${I.eye}I watched it</button>`:c.cal?`<button class="btn quiet" id="bSkip">Skip</button><button class="btn primary" id="bSeen">${I.eye}Rate it</button>`:
-   `<button class="btn quiet" id="bSkip">Skip</button><button class="btn quiet" id="bPass">${I.x}Pass</button><button class="btn primary" id="bWatch">${I.plus}Watchlist</button><button class="btn outline" id="bSeen">${I.eye}Seen it</button>`}
+  <div class="actions">
+   ${opt?`<div class="major two"><button class="btn quiet" id="bRemove">Remove</button><button class="btn primary" id="bSeen">${I.eye}I watched it</button></div>`
+   :c.cal?`<div class="minor"><button id="bSkip">Skip for now</button></div><div class="major one"><button class="btn primary" id="bSeen">${I.eye}Rate it</button></div>`
+   :`<div class="minor"><button id="bSkip">Skip for now</button><button id="bPass">Don't show again</button></div><div class="major"><button class="btn primary" id="bWatch">${I.plus}Add to watchlist</button><button class="btn outline" id="bSeen">${I.eye}I've seen it</button></div>`}
   </div>
  </article>
  <article class="face back" style="--c1:${c.c1};--c2:${c.c2}" aria-hidden="true">
@@ -740,6 +747,7 @@ const FILTERS=[{id:"fav",n:"Favorites"},{id:"love",n:"Loved"},{id:"all",n:"All r
 function inFilter(p,f){if(f==="all")return VERD[p.verdict].seen;return p.verdict===f;}
 function closeDetail(){const s=$("detSheet");s.hidden=true;$("detBody").innerHTML="";DET=null;render(false);}
 function openDetail(id){const c=byId[id];if(!c)return;$("detSheet").hidden=false;render(true,{c,host:$("detBody")});$("detBody").scrollTop=0;}
+function tileLine(c){const n=closest(c);return n?`If you liked ${n.title}`:oneLine(c);}
 function oneLine(c){const t=whyText(c);const i=t.indexOf(". ");return i>0?t.slice(0,i+1):t;}
 function renderWatch(){const el=$("favs");const m=scores();
  const items=Object.entries(S.picks).filter(([id,p])=>byId[id]&&p.verdict==="watch").map(([id])=>byId[id]).sort((a,b)=>m[b.id]-m[a.id]);
@@ -752,7 +760,7 @@ function renderWatch(){const el=$("favs");const m=scores();
    <div class="ptop"><span class="match"><b>${m[top.id]}%</b><span>match</span></span><span class="cover">Up next</span></div>
    <div class="pt"><div class="meta">${esc(`${top.year} ${top.kind.toLowerCase()}, ${top.eps}`)}</div><h2>${esc(top.title)}</h2></div></div>
   <div class="hwhy"><p>${esc(whyText(top))}</p><span class="more">See full card</span></div></button>
- <div class="wgrid">${rest.map(c=>`<button class="wt" data-open="${c.id}">${art(c)}<span class="wm">${m[c.id]}%</span><span class="wtt"><b>${esc(c.title)}</b><span>${esc(oneLine(c))}</span></span></button>`).join("")}</div>
+ <div class="wgrid">${rest.map(c=>`<button class="wt" data-open="${c.id}">${art(c)}<span class="wm">${m[c.id]}%</span><span class="wtt"><b>${esc(c.title)}</b><span>${esc(tileLine(c))}</span></span></button>`).join("")}</div>
  <div class="grp"><button class="linkbtn" id="copyW">Copy watchlist</button></div>`;
  paintAll(el);applyCovers(el);wantCovers(items.map(c=>c.id));
  el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openDetail(b.dataset.open));
